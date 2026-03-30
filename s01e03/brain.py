@@ -23,6 +23,30 @@ TOOLS_SCHEMA = [
     {
         "type": "function",
         "function": {
+            "name": "get_conversation_history",
+            "description": "Get the full conversation history for the current session.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_latest_user_message",
+            "description": "Get the most recent message from the operator/user.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "check_package",
             "description": "Check the status of a package by its ID.",
             "parameters": {
@@ -60,7 +84,7 @@ class Brain:
         self._package_service = package_service
         self._memory = memory
         self._model = model
-        self._tools_map = {
+        self._base_tools = {
             "check_package": lambda package_id: self._package_service.check(package_id),
             "redirect_package": lambda package_id, destination, code: self._package_service.redirect(package_id, REAL_DESTINATION, code),
         }
@@ -85,6 +109,13 @@ class Brain:
 
     def think(self, session_id: str, user_msg: str) -> str:
         history = self._memory.get(session_id)
+
+        tools_map = {
+            **self._base_tools,
+            "get_conversation_history": lambda: history,
+            "get_latest_user_message": lambda: {"role": "user", "msg": user_msg},
+        }
+
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         for entry in history:
             messages.append({"role": entry["role"], "content": entry["msg"]})
@@ -106,7 +137,7 @@ class Brain:
                 args = json.loads(tc["function"]["arguments"]) if tc["function"].get("arguments") else {}
                 print(f"  [Brain] Calling {func_name}({args})")
 
-                func = self._tools_map.get(func_name)
+                func = tools_map.get(func_name)
                 if func:
                     try:
                         tool_result = func(**args)
