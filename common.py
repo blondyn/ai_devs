@@ -63,6 +63,7 @@ def llm_call(messages, schema, max_tokens=1024, model="google/gemini-2.0-flash-0
     return json.loads(result['choices'][0]['message']['content'])
 
 def submit(api_key, task, answer):
-    result = api_post("/verify", {"apikey": api_key, "task": task, "answer": answer})
+    from endpoints import VERIFY
+    result = api_post(VERIFY, {"apikey": api_key, "task": task, "answer": answer})
     print(f"Response: {json.dumps(result, indent=2)}")
     return result

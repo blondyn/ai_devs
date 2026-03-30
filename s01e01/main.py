@@ -6,11 +6,12 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common import get_api_key, api_get, submit, llm_call, BASE_URL
+from endpoints import DATA_PEOPLE
 
 API_KEY = get_api_key()
 
 # 1. Download CSV
-url = f"{BASE_URL}/data/{API_KEY}/people.csv"
+url = f"{BASE_URL}{DATA_PEOPLE.format(api_key=API_KEY)}"
 response = urllib.request.urlopen(url)
 text = response.read().decode('utf-8')
 

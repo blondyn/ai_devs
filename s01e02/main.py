@@ -5,6 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common import api_get, api_post, BASE_URL, get_api_key, submit
+from endpoints import DATA_FINDHIM_LOCATIONS, LOCATION, ACCESS_LEVEL
 
 API_KEY = get_api_key()
 OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY")
@@ -39,13 +40,13 @@ def tool_get_suspects():
 
 
 def tool_get_power_plants():
-    data = api_get(f"/data/{API_KEY}/findhim_locations.json")
+    data = api_get(DATA_FINDHIM_LOCATIONS.format(api_key=API_KEY))
     return data["power_plants"]
 
 
 def tool_get_person_locations(name, surname):
     result = api_post(
-        "/api/location",
+        LOCATION,
         {"apikey": API_KEY, "name": name, "surname": surname},
     )
     return result if isinstance(result, list) else result.get("locations", result.get("data", []))
@@ -76,7 +77,7 @@ def tool_find_nearest_plant(locations):
 
 def tool_get_access_level(name, surname, birthYear):
     result = api_post(
-        "/api/accesslevel",
+        ACCESS_LEVEL,
         {"apikey": API_KEY, "name": name, "surname": surname, "birthYear": birthYear},
     )
     return result
