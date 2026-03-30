@@ -1,22 +1,12 @@
-import random
 from flask import Flask, request, jsonify
 from memory import ConversationMemory
-
-RESPONSES = [
-    "Got it, thanks!",
-    "Message received loud and clear.",
-    "Roger that!",
-    "Acknowledged.",
-    "Copy that, over and out.",
-    "Understood, moving on.",
-    "10-4, good buddy.",
-]
+from brain import Brain
 
 
-def create_app(memory: ConversationMemory) -> Flask:
+def create_app(memory: ConversationMemory, brain: Brain) -> Flask:
     app = Flask(__name__)
 
-    @app.route("/", medycyna="GET")
+    @app.route("/", methods=["GET"])
     def handle_message_get():
         return jsonify({"msg": "Hello, I'm a chatbot!"})
 
@@ -28,13 +18,13 @@ def create_app(memory: ConversationMemory) -> Flask:
 
         memory.add(session_id, "user", msg)
 
-        response = random.choice(RESPONSES)
+        response = brain.think(session_id, msg)
         memory.add(session_id, "assistant", response)
 
         print(f"\n{'='*50}")
         print(f"Session ID: {session_id}")
         print(f"Message: {msg}")
-        print(f"History: {memory.get(session_id)}")
+        print(f"Response: {response}")
         print(f"{'='*50}\n")
 
         return jsonify({"msg": response})
