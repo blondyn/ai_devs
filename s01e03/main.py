@@ -5,7 +5,6 @@ import sys
 from common import get_api_key
 
 from s01e03.memory import InMemoryConversationMemory
-from s01e03.packages import PackageService
 from s01e03.brain import Brain
 from s01e03.server import create_app
 
@@ -17,9 +16,21 @@ if not openrouter_key:
 
 llm_model = os.environ.get("LLM_MODEL", "anthropic/claude-haiku-4.5")
 llm_api_url = os.environ.get("LLM_API_URL", "https://openrouter.ai/api/v1/chat/completions")
+use_mcp = os.environ.get("USE_MCP", "false").lower() == "true"
 
 memory = InMemoryConversationMemory()
-package_service = PackageService(api_key)
+
+if use_mcp:
+    from s01e03.mcp_packages_client import McpPackageService
+    package_service = McpPackageService()
+    package_service.connect()
+    atexit.register(package_service.close)
+    print("[Main] Using MCP package service")
+else:
+    from s01e03.packages import PackageService
+    package_service = PackageService(api_key)
+    print("[Main] Using direct API package service")
+
 brain = Brain(openrouter_key, package_service, memory, model=llm_model, api_url=llm_api_url)
 app = create_app(memory, brain)
 
