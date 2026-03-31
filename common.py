@@ -3,7 +3,7 @@ import os
 import sys
 import urllib.request
 
-BASE_URL = "https://hub.ag3nts.org"
+BASE_URL = os.environ.get("API_BASE_URL", "https://hub.ag3nts.org")
 
 def load_dotenv():
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')

@@ -11,14 +11,16 @@ from s01e03.server import create_app
 
 api_key = get_api_key()
 openrouter_key = os.environ.get("OPENROUTER_API_KEY")
-server_port = os.environ.get("PORT")
 if not openrouter_key:
     print("OPENROUTER_API_KEY not set")
     sys.exit(1)
 
+llm_model = os.environ.get("LLM_MODEL", "anthropic/claude-haiku-4.5")
+llm_api_url = os.environ.get("LLM_API_URL", "https://openrouter.ai/api/v1/chat/completions")
+
 memory = InMemoryConversationMemory()
 package_service = PackageService(api_key)
-brain = Brain(openrouter_key, package_service, memory)
+brain = Brain(openrouter_key, package_service, memory, model=llm_model, api_url=llm_api_url)
 app = create_app(memory, brain)
 
 atexit.register(memory.dump)

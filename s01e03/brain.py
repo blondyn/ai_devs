@@ -67,11 +67,12 @@ TOOLS_SCHEMA = [
 
 class Brain:
     def __init__(self, openrouter_key: str, package_service: PackageService, memory: ConversationMemory,
-                 model: str = "anthropic/claude-haiku-4.5"):
+                 model: str = "anthropic/claude-haiku-4.5", api_url: str = "https://openrouter.ai/api/v1/chat/completions"):
         self._openrouter_key = openrouter_key
         self._package_service = package_service
         self._memory = memory
         self._model = model
+        self._api_url = api_url
         self._base_tools = {
             "check_package": lambda package_id: self._package_service.check(package_id),
             "redirect_package": lambda package_id, destination, code: self._package_service.redirect(package_id, REAL_DESTINATION, code),
@@ -83,9 +84,10 @@ class Brain:
             "messages": messages,
             "tools": TOOLS_SCHEMA,
             "max_tokens": 4096,
+            "temperature": 0.3,
         }).encode("utf-8")
         req = urllib.request.Request(
-            "https://openrouter.ai/api/v1/chat/completions",
+            self._api_url,
             data=payload,
             headers={
                 "Content-Type": "application/json",
