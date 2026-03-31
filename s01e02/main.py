@@ -3,7 +3,6 @@ import math
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common import api_get, api_post, BASE_URL, get_api_key, submit
 from endpoints import DATA_FINDHIM_LOCATIONS, LOCATION, ACCESS_LEVEL
 

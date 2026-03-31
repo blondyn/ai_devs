@@ -1,7 +1,3 @@
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from common import api_post, get_api_key, submit
 from endpoints import ACCESS_LEVEL, LOCATION
 API_KEY = get_api_key()

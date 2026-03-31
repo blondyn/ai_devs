@@ -1,7 +1,7 @@
 import json
 import urllib.request
-from packages import PackageService
-from memory import ConversationMemory
+from s01e03.packages import PackageService
+from s01e03.memory import ConversationMemory
 
 REAL_DESTINATION = "PWR6132PL"
 

@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
-from memory import ConversationMemory
-from brain import Brain
+from s01e03.memory import ConversationMemory
+from s01e03.brain import Brain
 
 
 def create_app(memory: ConversationMemory, brain: Brain) -> Flask:

@@ -1,10 +1,8 @@
 import csv
 import json
 import os
-import sys
 import urllib.request
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common import get_api_key, api_get, submit, llm_call, BASE_URL
 from endpoints import DATA_PEOPLE
 

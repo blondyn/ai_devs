@@ -23,6 +23,12 @@ def get_api_key():
         sys.exit(1)
     return key
 
+class ApiError(Exception):
+    def __init__(self, code, body):
+        self.code = code
+        self.body = body
+        super().__init__(f"HTTP {code}: {body}")
+
 def api_post(endpoint, payload):
     data = json.dumps(payload).encode('utf-8')
     req = urllib.request.Request(f"{BASE_URL}{endpoint}", data=data,
@@ -30,8 +36,7 @@ def api_post(endpoint, payload):
     try:
         resp = urllib.request.urlopen(req)
     except urllib.error.HTTPError as e:
-        print(f"HTTP Error {e.code}: {e.read().decode('utf-8')}")
-        sys.exit(1)
+        raise ApiError(e.code, e.read().decode('utf-8'))
     return json.loads(resp.read().decode('utf-8'))
 
 def api_get(path):

@@ -2,13 +2,12 @@ import atexit
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common import get_api_key
 
-from memory import InMemoryConversationMemory
-from packages import PackageService
-from brain import Brain
-from server import create_app
+from s01e03.memory import InMemoryConversationMemory
+from s01e03.packages import PackageService
+from s01e03.brain import Brain
+from s01e03.server import create_app
 
 api_key = get_api_key()
 openrouter_key = os.environ.get("OPENROUTER_API_KEY")
