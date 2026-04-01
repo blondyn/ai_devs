@@ -7,7 +7,7 @@ import os
 import uuid
 from datetime import datetime
 
-from common import get_api_key, load_dotenv, api_post
+from common import get_api_key, load_dotenv, api_post, cost_tracker
 from endpoints import VERIFY
 from s01e04.explorer import Explorer
 
@@ -151,3 +151,4 @@ if __name__ == "__main__":
         print("Submission skipped.")
 
     save_result(declaration, form_text, response)
+    print(f"\n{cost_tracker.summary()}")

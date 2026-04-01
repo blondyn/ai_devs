@@ -29,6 +29,30 @@ class ApiError(Exception):
         self.body = body
         super().__init__(f"HTTP {code}: {body}")
 
+
+class CostTracker:
+    """Tracks cumulative LLM usage and cost across calls."""
+    def __init__(self):
+        self.total_cost = 0.0
+        self.total_prompt_tokens = 0
+        self.total_completion_tokens = 0
+        self.calls = 0
+
+    def add(self, usage):
+        self.calls += 1
+        self.total_cost += usage.get("cost", 0) or 0
+        self.total_prompt_tokens += usage.get("prompt_tokens", 0)
+        self.total_completion_tokens += usage.get("completion_tokens", 0)
+
+    def summary(self):
+        return (
+            f"LLM calls: {self.calls} | "
+            f"Tokens: {self.total_prompt_tokens} in / {self.total_completion_tokens} out | "
+            f"Cost: ${self.total_cost:.6f}"
+        )
+
+cost_tracker = CostTracker()
+
 def api_post(endpoint, payload):
     data = json.dumps(payload).encode('utf-8')
     req = urllib.request.Request(f"{BASE_URL}{endpoint}", data=data,
@@ -88,6 +112,8 @@ def llm(messages, schema=None, tools=None, max_tokens=1024, temperature=None,
         print(f"HTTP Error {e.code}: {e.read().decode('utf-8')}")
         sys.exit(1)
     result = json.loads(resp.read().decode('utf-8'))
+    if "usage" in result:
+        cost_tracker.add(result["usage"])
     msg = result['choices'][0]['message']
     if raw:
         return msg

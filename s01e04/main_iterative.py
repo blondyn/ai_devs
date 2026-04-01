@@ -18,13 +18,13 @@ import uuid
 import urllib.request
 from datetime import datetime
 
-from common import get_api_key, load_dotenv, api_post, ApiError, llm, llm_vision_call, BASE_URL
+from common import get_api_key, load_dotenv, api_post, ApiError, llm, llm_vision_call, cost_tracker, BASE_URL
 from endpoints import VERIFY, DATA_DOC
 
 load_dotenv()
 api_key = get_api_key()
 
-MAX_ITERATIONS = 30
+MAX_ITERATIONS = 10
 LLM_MODEL = os.environ.get("LLM_MODEL", "google/gemini-2.0-flash-001")
 DOC_BASE = f"{BASE_URL}{DATA_DOC}"
 
@@ -308,3 +308,4 @@ if __name__ == "__main__":
         print(f"\nFailed after {MAX_ITERATIONS} iterations.")
 
     save_result(history, declaration, final_response)
+    print(f"\n{cost_tracker.summary()}")
