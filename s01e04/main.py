@@ -13,6 +13,7 @@ from s01e04.explorer import Explorer
 
 load_dotenv()
 api_key = get_api_key()
+LLM_MODEL = os.environ.get("LLM_MODEL", "google/gemini-2.0-flash-001")
 
 # Fixed values provided by the task
 FIXED = {
@@ -110,7 +111,7 @@ def save_result(declaration, form_text, response):
 if __name__ == "__main__":
     # Step 1: Load documents
     print("[1/3] Loading documents via Explorer...")
-    explorer = Explorer().load()
+    explorer = Explorer(model=LLM_MODEL).load()
 
     # Step 2: Ask LLM to determine unknown fields
     print("\n[2/3] Determining unknown fields...")

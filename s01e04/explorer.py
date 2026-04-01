@@ -82,8 +82,9 @@ def explore(base_url=DOC_BASE):
 class Explorer:
     """Stateful explorer that downloads documents once and answers questions about them."""
 
-    def __init__(self, base_url=DOC_BASE):
+    def __init__(self, base_url=DOC_BASE, model="google/gemini-2.0-flash-001"):
         self._base_url = base_url
+        self._model = model
         self._knowledge = None
         self._context = None
         self._history = []
@@ -116,6 +117,7 @@ class Explorer:
     def _describe_image(self, fname, fdata):
         print(f"  [Explorer] Analyzing image: {fname}")
         return llm_vision_call(
+            model=self._model,
             messages=[
                 {"role": "system", "content": "Opisz dokładnie co widzisz na obrazku. Wymień wszystkie lokalizacje, trasy, oznaczenia."},
                 {"role": "user", "content": [
@@ -133,11 +135,11 @@ class Explorer:
         self._history.append({"role": "user", "content": question})
 
         if schema:
-            answer = llm_call(self._history, schema=schema, max_tokens=max_tokens)
+            answer = llm_call(self._history, schema=schema, max_tokens=max_tokens, model=self._model)
             self._history.append({"role": "assistant", "content": str(answer)})
             return answer
         else:
-            answer = llm_vision_call(self._history, max_tokens=max_tokens)
+            answer = llm_vision_call(self._history, max_tokens=max_tokens, model=self._model)
             self._history.append({"role": "assistant", "content": answer})
             return answer
 

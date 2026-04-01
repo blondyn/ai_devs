@@ -23,9 +23,9 @@ from endpoints import VERIFY, DATA_DOC
 
 load_dotenv()
 api_key = get_api_key()
+LLM_MODEL = os.environ.get("LLM_MODEL", "google/gemini-2.0-flash-001")
 
 MAX_ITERATIONS = 10
-LLM_MODEL = os.environ.get("LLM_MODEL", "google/gemini-2.0-flash-001")
 DOC_BASE = f"{BASE_URL}{DATA_DOC}"
 
 KNOWN = {
@@ -255,7 +255,7 @@ if __name__ == "__main__":
                         b64 = base64.b64encode(raw).decode("utf-8")
                         ext = fname.rsplit(".", 1)[-1].lower()
                         mime = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}[ext]
-                        content = llm_vision_call(messages=[
+                        content = llm_vision_call(model=LLM_MODEL, messages=[
                             {"role": "system", "content": "Opisz dokładnie co widzisz. Wymień wszystkie trasy, kody, lokalizacje."},
                             {"role": "user", "content": [
                                 {"type": "text", "text": f"Opisz obraz {fname}:"},
