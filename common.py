@@ -67,6 +67,35 @@ def llm_call(messages, schema, max_tokens=1024, model="google/gemini-2.0-flash-0
     result = json.loads(resp.read().decode('utf-8'))
     return json.loads(result['choices'][0]['message']['content'])
 
+def llm_vision_call(messages, schema=None, max_tokens=1024, model="google/gemini-2.0-flash-001"):
+    openrouter_key = os.environ.get('OPENROUTER_API_KEY')
+    if not openrouter_key:
+        print("OPENROUTER_API_KEY not set")
+        sys.exit(1)
+    body = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": max_tokens,
+    }
+    if schema:
+        body["response_format"] = schema
+    payload = json.dumps(body).encode('utf-8')
+    req = urllib.request.Request(
+        "https://openrouter.ai/api/v1/chat/completions",
+        data=payload,
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {openrouter_key}"}
+    )
+    try:
+        resp = urllib.request.urlopen(req)
+    except urllib.error.HTTPError as e:
+        print(f"HTTP Error {e.code}: {e.read().decode('utf-8')}")
+        sys.exit(1)
+    result = json.loads(resp.read().decode('utf-8'))
+    content = result['choices'][0]['message']['content']
+    if schema:
+        return json.loads(content)
+    return content
+
 def submit(api_key, task, answer):
     from endpoints import VERIFY
     result = api_post(VERIFY, {"apikey": api_key, "task": task, "answer": answer})
