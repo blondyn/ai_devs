@@ -43,31 +43,24 @@ def api_get(path):
     with urllib.request.urlopen(f"{BASE_URL}{path}") as resp:
         return json.loads(resp.read().decode('utf-8'))
 
-def llm_call(messages, schema, max_tokens=1024, model="google/gemini-2.0-flash-001"):
-    openrouter_key = os.environ.get('OPENROUTER_API_KEY')
-    if not openrouter_key:
-        print("OPENROUTER_API_KEY not set")
-        sys.exit(1)
-    payload = json.dumps({
-        "model": model,
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "response_format": schema
-    }).encode('utf-8')
-    req = urllib.request.Request(
-        "https://openrouter.ai/api/v1/chat/completions",
-        data=payload,
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {openrouter_key}"}
-    )
-    try:
-        resp = urllib.request.urlopen(req)
-    except urllib.error.HTTPError as e:
-        print(f"HTTP Error {e.code}: {e.read().decode('utf-8')}")
-        sys.exit(1)
-    result = json.loads(resp.read().decode('utf-8'))
-    return json.loads(result['choices'][0]['message']['content'])
+def llm(messages, schema=None, tools=None, max_tokens=1024, temperature=None,
+        model="google/gemini-2.0-flash-001", raw=False):
+    """Unified LLM call via OpenRouter. Supports structured output, tool use, and vision.
 
-def llm_vision_call(messages, schema=None, max_tokens=1024, model="google/gemini-2.0-flash-001"):
+    Args:
+        messages: Chat messages (can include multimodal content).
+        schema: JSON schema for structured output (response_format).
+        tools: Tool definitions for function calling.
+        max_tokens: Max response tokens.
+        temperature: Sampling temperature.
+        model: OpenRouter model ID.
+        raw: If True, return the full message object (useful for tool_calls).
+
+    Returns:
+        - If raw: full message dict from the API.
+        - If schema: parsed JSON object.
+        - Otherwise: content string.
+    """
     openrouter_key = os.environ.get('OPENROUTER_API_KEY')
     if not openrouter_key:
         print("OPENROUTER_API_KEY not set")
@@ -79,6 +72,10 @@ def llm_vision_call(messages, schema=None, max_tokens=1024, model="google/gemini
     }
     if schema:
         body["response_format"] = schema
+    if tools:
+        body["tools"] = tools
+    if temperature is not None:
+        body["temperature"] = temperature
     payload = json.dumps(body).encode('utf-8')
     req = urllib.request.Request(
         "https://openrouter.ai/api/v1/chat/completions",
@@ -91,10 +88,23 @@ def llm_vision_call(messages, schema=None, max_tokens=1024, model="google/gemini
         print(f"HTTP Error {e.code}: {e.read().decode('utf-8')}")
         sys.exit(1)
     result = json.loads(resp.read().decode('utf-8'))
-    content = result['choices'][0]['message']['content']
-    if schema:
+    msg = result['choices'][0]['message']
+    if raw:
+        return msg
+    content = msg.get('content', '')
+    if schema and content:
         return json.loads(content)
     return content
+
+
+def llm_call(messages, schema, max_tokens=1024, model="google/gemini-2.0-flash-001"):
+    """Structured output LLM call. Returns parsed JSON."""
+    return llm(messages, schema=schema, max_tokens=max_tokens, model=model)
+
+
+def llm_vision_call(messages, schema=None, max_tokens=1024, model="google/gemini-2.0-flash-001"):
+    """LLM call with vision support. Returns parsed JSON if schema given, else string."""
+    return llm(messages, schema=schema, max_tokens=max_tokens, model=model)
 
 def submit(api_key, task, answer):
     from endpoints import VERIFY

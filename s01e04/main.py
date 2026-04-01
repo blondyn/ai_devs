@@ -117,10 +117,12 @@ if __name__ == "__main__":
     unknowns = explorer.ask(
         "Muszę wysłać przesyłkę z Gdańska do Żarnowca. Zawartość: kasety z paliwem do reaktora, waga 2800 kg. "
         "Na podstawie dokumentacji SPK ustal:\n"
-        "1. DATA — jaka jest dzisiejsza data w formacie YYYY-MM-DD (użyj daty z dokumentacji, Rok Systemu 14)\n"
-        "2. TRASA — jaki kod trasy prowadzi z Gdańska do Żarnowca (sprawdź mapę sieci w załączniku F)\n"
-        "3. KATEGORIA — jaka kategoria przesyłki pasuje do paliwa reaktorowego (A-E)\n"
-        "4. WDP — ile dodatkowych wagonów potrzeba? Standardowy pociąg ma 2 wagony po 500 kg = 1000 kg. "
+        "1. DATA — data w formacie YYYY-MM-DD (Rok Systemu 14, Cykl 7, Kwartał 3)\n"
+        "2. TRASA — kod trasy z załącznika F (mapa sieci). Kody tras mają format np. M-01, R-04, X-01 itd. "
+        "Znajdź kod trasy łączącej Gdańsk z Żarnowcem.\n"
+        "3. KATEGORIA — jaka kategoria przesyłki (A/B/C/D/E) pasuje do paliwa reaktorowego? "
+        "Kategoria A to strategiczna (wojskowa/rządowa), B to medyczna, E to osobista.\n"
+        "4. WDP — ile dodatkowych wagonów potrzeba? Standardowy pociąg: 2 wagony × 500 kg = 1000 kg. "
         "Przesyłka waży 2800 kg, więc potrzeba dodatkowych wagonów po 500 kg każdy.",
         schema=UNKNOWN_FIELDS_SCHEMA,
         max_tokens=1024
