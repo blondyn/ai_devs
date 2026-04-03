@@ -5,6 +5,13 @@ import uuid
 import urllib.request
 from datetime import datetime
 
+class ApiResponse(dict):
+    """API response that behaves like a dict (body) but also exposes headers and status."""
+    def __init__(self, body, headers, status):
+        super().__init__(body)
+        self.headers = headers
+        self.status = status
+
 BASE_URL = os.environ.get("API_BASE_URL", "https://hub.ag3nts.org")
 
 def load_dotenv():
@@ -26,9 +33,10 @@ def get_api_key():
     return key
 
 class ApiError(Exception):
-    def __init__(self, code, body):
+    def __init__(self, code, body, headers=None):
         self.code = code
         self.body = body
+        self.headers = dict(headers) if headers else {}
         super().__init__(f"HTTP {code}: {body}")
 
 
@@ -62,8 +70,10 @@ def api_post(endpoint, payload):
     try:
         resp = urllib.request.urlopen(req)
     except urllib.error.HTTPError as e:
-        raise ApiError(e.code, e.read().decode('utf-8'))
-    return json.loads(resp.read().decode('utf-8'))
+        raise ApiError(e.code, e.read().decode('utf-8'), e.headers)
+    body = json.loads(resp.read().decode('utf-8'))
+    headers = dict(resp.headers)
+    return ApiResponse(body, headers, resp.status)
 
 def api_get(path):
     with urllib.request.urlopen(f"{BASE_URL}{path}") as resp:
