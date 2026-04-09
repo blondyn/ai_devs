@@ -47,27 +47,29 @@ def main():
     rows = api_get(path, "csv")
     results = load_results()
 
-    for row in rows:
-        key = row_key(row)
+    try:
+        for row in rows:
+            key = row_key(row)
 
-        # if key in results:
-        #     print(f"Skipping (already processed): {row}")
-        #     continue
+            # if key in results:
+            #     print(f"Skipping (already processed): {row}")
+            #     continue
 
-        idenfier = row.get("identifier", str(row))
-        prompt = {"prompt": build_prompt(idenfier)}
+            idenfier = row.get("identifier", str(row))
+            prompt = {"prompt": build_prompt(idenfier)}
 
-        try:
-            result = submit(API_KEY, task="categorize", answer=prompt)
-        except ApiError as e:
-            print(f"Failed to process: {row}")
-            print(f"API error: HTTP {e.code} - {e.body}\n")
-            break
+            try:
+                result = submit(API_KEY, task="categorize", answer=prompt)
+            except ApiError as e:
+                print(f"Failed to process: {row}")
+                print(f"API error: HTTP {e.code} - {e.body}\n")
+                break
 
-        results[key] = {"input": row, "response": result}
+            results[key] = {"input": row, "response": result}
+            print(f"Processed: {row}")
+            print(f"Response: {result}\n")
+    finally:
         save_results(results)
-        print(f"Processed: {row}")
-        print(f"Response: {result}\n")
 
     print(f"\nCompleted. Processed {len(results)} items.")
 
