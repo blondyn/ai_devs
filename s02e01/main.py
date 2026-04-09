@@ -13,23 +13,10 @@ CUSTOM_ITEMS = [
 ]
 
 PROMPTS = {
-    "default": """Classify as DNG or NEU.
-DNG: only weapons, explosives, poison.
-NEU: everything else including reactor items and machinery.
-One word answer: DNG or NEU
-
-Item: {identifier}
-""",
-    "verbose": """Classify as DNG or NEU.
-DNG: only weapons, explosives, poison.
-NEU: everything else including reactor items and machinery.
-One word answer: DNG or NEU
-
-Item: {identifier}
-""",
+    "default": "Categorize the following item as DNG (dangerous: weapons, explosives, poison) or NEU (neutral: everything else, including all reactor-related items). The output should be exactly one word. Consider carefully. Do not output any preamble or postamble. Output DNG or NEU only. {identifier}",
 }
 
-ACTIVE_PROMPT = "verbose"
+ACTIVE_PROMPT = "default"
 
 
 def load_results():
@@ -74,39 +61,66 @@ def retry(attempts_left):
     return True
 
 
+def run(prompt_template=None, items=None):
+    """Run classification with given prompt template and items.
+
+    Returns list of result dicts with debug info from each API response.
+    Raises on non-retryable errors.
+    """
+    reset_balance()
+    if prompt_template is None:
+        prompt_template = PROMPTS[ACTIVE_PROMPT]
+    rows = items if items else (CUSTOM_ITEMS if CUSTOM_ITEMS else fetch_rows())
+    results = []
+
+    for row in rows:
+        code = row.get("code", "")
+        desc = row.get("description", str(row))
+        identifier = f"{code}: {desc}" if code else desc
+        prompt = {"prompt": prompt_template.format(identifier=identifier)}
+        attempts_left = 3
+
+        while True:
+            try:
+                result = submit(API_KEY, task="categorize", answer=prompt)
+                break
+            except ApiError as e:
+                print(f"  API error {e.code}: {e.body}")
+                if e.code == 402:
+                    attempts_left -= 1
+                    if not retry(attempts_left):
+                        print(f"Max retries reached for {identifier}, stopping.")
+                        return results
+                    print(f"Balance reset, retrying ({attempts_left} attempts left)...")
+                else:
+                    print(f"Error HTTP {e.code} for {identifier}, stopping.")
+                    return results
+            except Exception as e:
+                print(f"  Unexpected error: {e}, stopping.")
+                return results
+
+        debug = result.get("debug", {})
+        results.append({
+            "identifier": identifier,
+            "output": debug.get("output"),
+            "tokens": debug.get("tokens", 0),
+            "cached_tokens": debug.get("cached_tokens", 0),
+            "flag": debug.get("flag"),
+            "result": debug.get("result"),
+        })
+        print(f"  [{len(results)}/{len(rows)}] {identifier[:50]} -> {debug.get('output')} "
+              f"(tokens: {debug.get('tokens')}, cached: {debug.get('cached_tokens')})")
+
+    return results
+
+
 def main():
     """Main entry point."""
-    reset_balance()
-    rows = CUSTOM_ITEMS if CUSTOM_ITEMS else fetch_rows()
-    results = load_results()
-
-    try:
-        for row in rows:
-            key = row_key(row)
-            identifier = row.get("identifier", str(row))
-            prompt = {"prompt": build_prompt(identifier)}
-            attempts_left = 3
-
-            while True:
-                try:
-                    result = submit(API_KEY, task="categorize", answer=prompt)
-                    break
-                except ApiError as e:
-                    if e.code == 400:
-                        attempts_left -= 1
-                        if not retry(attempts_left):
-                            sys.exit(f"Max retries reached for {identifier}, exiting.")
-                        print(f"Balance reset, retrying ({attempts_left} attempts left)...")
-                    else:
-                        raise
-
-            results[key] = {"input": row, "response": result}
-            print(f"Processed: {row}")
-            print(f"Response: {result}\n")
-    finally:
-        save_results(results)
-
-    print(f"\nCompleted. Processed {len(results)} items.")
+    results = run()
+    flag = next((r["flag"] for r in results if r["flag"]), None)
+    if flag:
+        print(f"\nFlag: {flag}")
+    print(f"Completed. Processed {len(results)} items.")
 
 
 if __name__ == "__main__":
