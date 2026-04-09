@@ -12,8 +12,6 @@ class ApiResponse(dict):
         self.headers = headers
         self.status = status
 
-BASE_URL = os.environ.get("API_BASE_URL", "https://hub.ag3nts.org")
-
 def load_dotenv():
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
     if os.path.exists(path):
@@ -24,8 +22,11 @@ def load_dotenv():
                     k, v = line.split('=', 1)
                     os.environ[k.strip()] = v.strip()
 
+load_dotenv()
+
+BASE_URL = os.environ.get("API_BASE_URL", "https://hub.ag3nts.org")
+
 def get_api_key():
-    load_dotenv()
     key = os.environ.get('AGENTS_KEY')
     if not key:
         print("AGENTS_KEY not set")

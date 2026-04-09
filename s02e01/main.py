@@ -92,8 +92,11 @@ def run(prompt_template=None, items=None):
                         print(f"Max retries reached for {identifier}, stopping.")
                         return results
                     print(f"Balance reset, retrying ({attempts_left} attempts left)...")
+                elif e.code == 406:
+                    print(f"  Wrong classification for {identifier}, aborting prompt.")
+                    return results
                 else:
-                    print(f"Error HTTP {e.code} for {identifier}, stopping.")
+                    print(f"  Error HTTP {e.code} for {identifier}, stopping.")
                     return results
             except Exception as e:
                 print(f"  Unexpected error: {e}, stopping.")

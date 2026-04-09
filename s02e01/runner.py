@@ -149,15 +149,18 @@ def main():
             "wrong_details": [{"identifier": w["identifier"], "output": w["output"]} for w in stats["wrong"]],
             "flag": stats["flag"],
         }
-        save_run(run_entry)
         history.append(run_entry)
 
-        if stats["flag"]:
-            print(f"Flag: {stats['flag']}")
+        if not stats["flag"]:
+            print("No flag returned, prompt incomplete — skipping.\n")
+            continue
 
-        if not stats["wrong"] and (best is None or stats["cache_rate"] > best["cache_rate"]
-                                    or (stats["cache_rate"] == best["cache_rate"]
-                                        and stats["avg_tokens"] < best["avg_tokens"])):
+        save_run(run_entry)
+        print(f"Flag: {stats['flag']}")
+
+        if best is None or stats["cache_rate"] > best["cache_rate"] \
+                or (stats["cache_rate"] == best["cache_rate"]
+                    and stats["avg_tokens"] < best["avg_tokens"]):
             best = {**stats, "prompt": prompt_template, "iteration": i + 1}
             print("^ New best!")
 
