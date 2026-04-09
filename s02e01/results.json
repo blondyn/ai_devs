@@ -1,0 +1,243 @@
+{
+  "{\"code\": \"i7145\", \"description\": \"Industrial water pump impeller made of stainless steel\"}": {
+    "input": {
+      "code": "i7145",
+      "description": "Industrial water pump impeller made of stainless steel"
+    },
+    "response": {
+      "code": 0,
+      "message": "ACCEPTED - {FLG:SMUGGLER}",
+      "debug": {
+        "output": "NEU",
+        "tokens": 77,
+        "cached_tokens": 58,
+        "input_cost": 0.096,
+        "output_cost": 0.004,
+        "balance": 0.42,
+        "result": "correct classification",
+        "classified_items": 10,
+        "required_items": 10,
+        "global_cache_hit_rate": 66.84,
+        "global_cache_total_tokens": 781,
+        "global_cache_cached_tokens": 522,
+        "flag": "{FLG:SMUGGLER}"
+      }
+    }
+  },
+  "{\"code\": \"i3685\", \"description\": \"Portable oscilloscope with cracked screen but working internals\"}": {
+    "input": {
+      "code": "i3685",
+      "description": "Portable oscilloscope with cracked screen but working internals"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 78,
+        "cached_tokens": 0,
+        "input_cost": 0.156,
+        "output_cost": 0.004,
+        "balance": 1.34,
+        "result": "correct classification",
+        "classified_items": 1,
+        "required_items": 10,
+        "global_cache_hit_rate": 0,
+        "global_cache_total_tokens": 78,
+        "global_cache_cached_tokens": 0
+      }
+    }
+  },
+  "{\"code\": \"i4917\", \"description\": \"Reactor fuel cassette marked as fresh, sealed in lead-lined transport container\"}": {
+    "input": {
+      "code": "i4917",
+      "description": "Reactor fuel cassette marked as fresh, sealed in lead-lined transport container"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 82,
+        "cached_tokens": 58,
+        "input_cost": 0.106,
+        "output_cost": 0.004,
+        "balance": 1.23,
+        "result": "correct classification",
+        "classified_items": 2,
+        "required_items": 10,
+        "global_cache_hit_rate": 36.25,
+        "global_cache_total_tokens": 160,
+        "global_cache_cached_tokens": 58
+      }
+    }
+  },
+  "{\"code\": \"i1107\", \"description\": \"Semi-automatic handgun with worn serial markings\"}": {
+    "input": {
+      "code": "i1107",
+      "description": "Semi-automatic handgun with worn serial markings"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "DNG",
+        "tokens": 76,
+        "cached_tokens": 58,
+        "input_cost": 0.094,
+        "output_cost": 0.004,
+        "balance": 1.132,
+        "result": "correct classification",
+        "classified_items": 3,
+        "required_items": 10,
+        "global_cache_hit_rate": 49.15,
+        "global_cache_total_tokens": 236,
+        "global_cache_cached_tokens": 116
+      }
+    }
+  },
+  "{\"code\": \"i1456\", \"description\": \"Assortment of rubber O-rings and gaskets in various diameters\"}": {
+    "input": {
+      "code": "i1456",
+      "description": "Assortment of rubber O-rings and gaskets in various diameters"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 82,
+        "cached_tokens": 58,
+        "input_cost": 0.106,
+        "output_cost": 0.004,
+        "balance": 1.022,
+        "result": "correct classification",
+        "classified_items": 4,
+        "required_items": 10,
+        "global_cache_hit_rate": 54.72,
+        "global_cache_total_tokens": 318,
+        "global_cache_cached_tokens": 174
+      }
+    }
+  },
+  "{\"code\": \"i3188\", \"description\": \"Typical shotgun with ammo\"}": {
+    "input": {
+      "code": "i3188",
+      "description": "Typical shotgun with ammo"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "DNG",
+        "tokens": 72,
+        "cached_tokens": 58,
+        "input_cost": 0.086,
+        "output_cost": 0.004,
+        "balance": 0.932,
+        "result": "correct classification",
+        "classified_items": 5,
+        "required_items": 10,
+        "global_cache_hit_rate": 59.49,
+        "global_cache_total_tokens": 390,
+        "global_cache_cached_tokens": 232
+      }
+    }
+  },
+  "{\"code\": \"i7412\", \"description\": \"Power inverter module designed to convert 12V DC to 220V AC\"}": {
+    "input": {
+      "code": "i7412",
+      "description": "Power inverter module designed to convert 12V DC to 220V AC"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 81,
+        "cached_tokens": 58,
+        "input_cost": 0.104,
+        "output_cost": 0.004,
+        "balance": 0.824,
+        "result": "correct classification",
+        "classified_items": 6,
+        "required_items": 10,
+        "global_cache_hit_rate": 61.57,
+        "global_cache_total_tokens": 471,
+        "global_cache_cached_tokens": 290
+      }
+    }
+  },
+  "{\"code\": \"i2620\", \"description\": \"Bolt-action rifle with a cracked wooden stock\"}": {
+    "input": {
+      "code": "i2620",
+      "description": "Bolt-action rifle with a cracked wooden stock"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "DNG",
+        "tokens": 77,
+        "cached_tokens": 58,
+        "input_cost": 0.096,
+        "output_cost": 0.004,
+        "balance": 0.724,
+        "result": "correct classification",
+        "classified_items": 7,
+        "required_items": 10,
+        "global_cache_hit_rate": 63.5,
+        "global_cache_total_tokens": 548,
+        "global_cache_cached_tokens": 348
+      }
+    }
+  },
+  "{\"code\": \"i6047\", \"description\": \"Reactor fuel cassette with experimental thorium-based fuel composition\"}": {
+    "input": {
+      "code": "i6047",
+      "description": "Reactor fuel cassette with experimental thorium-based fuel composition"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 79,
+        "cached_tokens": 58,
+        "input_cost": 0.1,
+        "output_cost": 0.004,
+        "balance": 0.62,
+        "result": "correct classification",
+        "classified_items": 8,
+        "required_items": 10,
+        "global_cache_hit_rate": 64.75,
+        "global_cache_total_tokens": 627,
+        "global_cache_cached_tokens": 406
+      }
+    }
+  },
+  "{\"code\": \"i8827\", \"description\": \"Stun baton with cracked insulation and exposed wiring\"}": {
+    "input": {
+      "code": "i8827",
+      "description": "Stun baton with cracked insulation and exposed wiring"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "DNG",
+        "tokens": 77,
+        "cached_tokens": 58,
+        "input_cost": 0.096,
+        "output_cost": 0.004,
+        "balance": 0.52,
+        "result": "correct classification",
+        "classified_items": 9,
+        "required_items": 10,
+        "global_cache_hit_rate": 65.91,
+        "global_cache_total_tokens": 704,
+        "global_cache_cached_tokens": 464
+      }
+    }
+  }
+}

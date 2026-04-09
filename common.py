@@ -75,9 +75,50 @@ def api_post(endpoint, payload):
     headers = dict(resp.headers)
     return ApiResponse(body, headers, resp.status)
 
-def api_get(path):
+def _parse_json(content):
+    import json
+    return json.loads(content)
+
+
+def _parse_csv(content):
+    import csv
+    import io
+    return list(csv.DictReader(io.StringIO(content)))
+
+
+def _parse_text(content):
+    return content
+
+
+# Built-in parsers for common formats
+API_PARSERS = {
+    "json": _parse_json,
+    "csv": _parse_csv,
+    "text": _parse_text,
+}
+
+
+def api_get(path, parser="json"):
+    """Fetch data from API endpoint.
+
+    Args:
+        path: API endpoint path.
+        parser: Either a string key from API_PARSERS ("json", "csv", "text"),
+                or a callable that takes raw content and returns parsed data.
+
+    Returns:
+        Parsed response data.
+    """
     with urllib.request.urlopen(f"{BASE_URL}{path}") as resp:
-        return json.loads(resp.read().decode('utf-8'))
+        content = resp.read().decode('utf-8')
+
+    if callable(parser):
+        return parser(content)
+
+    parser_fn = API_PARSERS.get(parser)
+    if not parser_fn:
+        raise ValueError(f"Unknown parser: {parser}")
+    return parser_fn(content)
 
 def llm(messages, schema=None, tools=None, max_tokens=1024, temperature=None,
         model="google/gemini-2.0-flash-001", raw=False):
