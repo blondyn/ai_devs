@@ -61,16 +61,35 @@ def retry(attempts_left):
     return True
 
 
-def run(prompt_template=None, items=None):
-    """Run classification with given prompt template and items.
+def query(prompt, with_retries=True):
+    """Submit a single classification query to the API.
+
+    Returns the API result dict.
+    Raises ApiError or Exception on failure when retries are disabled or exhausted.
+    """
+    attempts_left = 3 if with_retries else 1
+
+    while True:
+        try:
+            return submit(API_KEY, task="categorize", answer=prompt)
+        except ApiError as e:
+            print(f"  API error {e.code}: {e.body}")
+            if with_retries and e.code == 402:
+                attempts_left -= 1
+                if not retry(attempts_left):
+                    raise
+                print(f"Balance reset, retrying ({attempts_left} attempts left)...")
+            else:
+                raise
+        except Exception:
+            raise
+
+
+def process_rows(rows, prompt_template, with_retries=True):
+    """Process a list of rows through classification.
 
     Returns list of result dicts with debug info from each API response.
-    Raises on non-retryable errors.
     """
-    reset_balance()
-    if prompt_template is None:
-        prompt_template = PROMPTS[ACTIVE_PROMPT]
-    rows = items if items else (CUSTOM_ITEMS if CUSTOM_ITEMS else fetch_rows())
     results = []
 
     for row in rows:
@@ -78,29 +97,18 @@ def run(prompt_template=None, items=None):
         desc = row.get("description", str(row))
         identifier = f"{code}: {desc}" if code else desc
         prompt = {"prompt": prompt_template.format(identifier=identifier)}
-        attempts_left = 3
 
-        while True:
-            try:
-                result = submit(API_KEY, task="categorize", answer=prompt)
-                break
-            except ApiError as e:
-                print(f"  API error {e.code}: {e.body}")
-                if e.code == 402:
-                    attempts_left -= 1
-                    if not retry(attempts_left):
-                        print(f"Max retries reached for {identifier}, stopping.")
-                        return results
-                    print(f"Balance reset, retrying ({attempts_left} attempts left)...")
-                elif e.code == 406:
-                    print(f"  Wrong classification for {identifier}, aborting prompt.")
-                    return results
-                else:
-                    print(f"  Error HTTP {e.code} for {identifier}, stopping.")
-                    return results
-            except Exception as e:
-                print(f"  Unexpected error: {e}, stopping.")
-                return results
+        try:
+            result = query(prompt, with_retries=with_retries)
+        except ApiError as e:
+            if e.code == 406:
+                print(f"  Wrong classification for {identifier}, aborting prompt.")
+            else:
+                print(f"  Error HTTP {e.code} for {identifier}, stopping.")
+            return results
+        except Exception as e:
+            print(f"  Unexpected error: {e}, stopping.")
+            return results
 
         debug = result.get("debug", {})
         results.append({
@@ -115,6 +123,15 @@ def run(prompt_template=None, items=None):
               f"(tokens: {debug.get('tokens')}, cached: {debug.get('cached_tokens')})")
 
     return results
+
+
+def run(prompt_template=None, items=None, with_retries=True):
+    """Run classification with given prompt template and items."""
+    reset_balance()
+    if prompt_template is None:
+        prompt_template = PROMPTS[ACTIVE_PROMPT]
+    rows = items if items else (CUSTOM_ITEMS if CUSTOM_ITEMS else fetch_rows())
+    return process_rows(rows, prompt_template, with_retries=with_retries)
 
 
 def main():

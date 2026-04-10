@@ -239,5 +239,366 @@
         "global_cache_cached_tokens": 464
       }
     }
+  },
+  "{\"code\": \"i2567\", \"description\": \"Reactor fuel cassette with micro-fractures in casing, handle with extreme caution\"}": {
+    "input": {
+      "code": "i2567",
+      "description": "Reactor fuel cassette with micro-fractures in casing, handle with extreme caution"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 78,
+        "cached_tokens": 0,
+        "input_cost": 0.156,
+        "output_cost": 0.004,
+        "balance": 1.34,
+        "result": "correct classification",
+        "classified_items": 1,
+        "required_items": 10,
+        "global_cache_hit_rate": 0,
+        "global_cache_total_tokens": 78,
+        "global_cache_cached_tokens": 0
+      }
+    }
+  },
+  "{\"code\": \"i2048\", \"description\": \"Rusty hand-cranked generator salvaged from a pre-war emergency shelter\"}": {
+    "input": {
+      "code": "i2048",
+      "description": "Rusty hand-cranked generator salvaged from a pre-war emergency shelter"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 77,
+        "cached_tokens": 52,
+        "input_cost": 0.102,
+        "output_cost": 0.004,
+        "balance": 1.234,
+        "result": "correct classification",
+        "classified_items": 2,
+        "required_items": 10,
+        "global_cache_hit_rate": 33.55,
+        "global_cache_total_tokens": 155,
+        "global_cache_cached_tokens": 52
+      }
+    }
+  },
+  "{\"code\": \"i2395\", \"description\": \"Large industrial fan blade assembly, three blades, aluminum construction\"}": {
+    "input": {
+      "code": "i2395",
+      "description": "Large industrial fan blade assembly, three blades, aluminum construction"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 72,
+        "cached_tokens": 52,
+        "input_cost": 0.092,
+        "output_cost": 0.004,
+        "balance": 1.138,
+        "result": "correct classification",
+        "classified_items": 3,
+        "required_items": 10,
+        "global_cache_hit_rate": 45.81,
+        "global_cache_total_tokens": 227,
+        "global_cache_cached_tokens": 104
+      }
+    }
+  },
+  "{\"code\": \"i6358\", \"description\": \"Tangle of fiber optic cables with connectors still attached\"}": {
+    "input": {
+      "code": "i6358",
+      "description": "Tangle of fiber optic cables with connectors still attached"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 71,
+        "cached_tokens": 52,
+        "input_cost": 0.09,
+        "output_cost": 0.004,
+        "balance": 1.044,
+        "result": "correct classification",
+        "classified_items": 4,
+        "required_items": 10,
+        "global_cache_hit_rate": 52.35,
+        "global_cache_total_tokens": 298,
+        "global_cache_cached_tokens": 156
+      }
+    }
+  },
+  "{\"code\": \"i4283\", \"description\": \"Handful of fuses in glass tubes, rated between 1A and 30A\"}": {
+    "input": {
+      "code": "i4283",
+      "description": "Handful of fuses in glass tubes, rated between 1A and 30A"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 77,
+        "cached_tokens": 52,
+        "input_cost": 0.102,
+        "output_cost": 0.004,
+        "balance": 0.938,
+        "result": "correct classification",
+        "classified_items": 5,
+        "required_items": 10,
+        "global_cache_hit_rate": 55.47,
+        "global_cache_total_tokens": 375,
+        "global_cache_cached_tokens": 208
+      }
+    }
+  },
+  "{\"code\": \"i0619\", \"description\": \"Reactor fuel cassette designed for experimental fast-breeder reactor models\"}": {
+    "input": {
+      "code": "i0619",
+      "description": "Reactor fuel cassette designed for experimental fast-breeder reactor models"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 74,
+        "cached_tokens": 52,
+        "input_cost": 0.096,
+        "output_cost": 0.004,
+        "balance": 0.838,
+        "result": "correct classification",
+        "classified_items": 6,
+        "required_items": 10,
+        "global_cache_hit_rate": 57.91,
+        "global_cache_total_tokens": 449,
+        "global_cache_cached_tokens": 260
+      }
+    }
+  },
+  "{\"code\": \"i0254\", \"description\": \"Forklift hydraulic cylinder, leaking slightly at one seal\"}": {
+    "input": {
+      "code": "i0254",
+      "description": "Forklift hydraulic cylinder, leaking slightly at one seal"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 72,
+        "cached_tokens": 52,
+        "input_cost": 0.092,
+        "output_cost": 0.004,
+        "balance": 0.742,
+        "result": "correct classification",
+        "classified_items": 7,
+        "required_items": 10,
+        "global_cache_hit_rate": 59.88,
+        "global_cache_total_tokens": 521,
+        "global_cache_cached_tokens": 312
+      }
+    }
+  },
+  "{\"code\": \"i7628\", \"description\": \"Transformer core from a substation, weighs about 90 kilograms\"}": {
+    "input": {
+      "code": "i7628",
+      "description": "Transformer core from a substation, weighs about 90 kilograms"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 73,
+        "cached_tokens": 52,
+        "input_cost": 0.094,
+        "output_cost": 0.004,
+        "balance": 0.644,
+        "result": "correct classification",
+        "classified_items": 8,
+        "required_items": 10,
+        "global_cache_hit_rate": 61.28,
+        "global_cache_total_tokens": 594,
+        "global_cache_cached_tokens": 364
+      }
+    }
+  },
+  "{\"code\": \"i2710\", \"description\": \"Wrought iron anvil, chipped but usable, about 25 kilograms\"}": {
+    "input": {
+      "code": "i2710",
+      "description": "Wrought iron anvil, chipped but usable, about 25 kilograms"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 75,
+        "cached_tokens": 52,
+        "input_cost": 0.098,
+        "output_cost": 0.004,
+        "balance": 0.542,
+        "result": "correct classification",
+        "classified_items": 9,
+        "required_items": 10,
+        "global_cache_hit_rate": 62.18,
+        "global_cache_total_tokens": 669,
+        "global_cache_cached_tokens": 416
+      }
+    }
+  },
+  "{\"code\": \"i6430\", \"description\": \"a small motor for a remote-controlled car\"}": {
+    "input": {
+      "code": "i6430",
+      "description": "a small motor for a remote-controlled car"
+    },
+    "response": {
+      "code": 0,
+      "message": "ACCEPTED - {FLG:SMUGGLER}",
+      "debug": {
+        "output": "NEU",
+        "tokens": 70,
+        "cached_tokens": 52,
+        "input_cost": 0.088,
+        "output_cost": 0.004,
+        "balance": 0.45,
+        "result": "correct classification",
+        "classified_items": 10,
+        "required_items": 10,
+        "global_cache_hit_rate": 63.33,
+        "global_cache_total_tokens": 739,
+        "global_cache_cached_tokens": 468,
+        "flag": "{FLG:SMUGGLER}"
+      }
+    }
+  },
+  "{\"code\": \"i2891\", \"description\": \"Handful of ceramic capacitors and resistors in an old tobacco tin\"}": {
+    "input": {
+      "code": "i2891",
+      "description": "Handful of ceramic capacitors and resistors in an old tobacco tin"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 44,
+        "cached_tokens": 0,
+        "input_cost": 0.088,
+        "output_cost": 0.004,
+        "balance": 1.408,
+        "result": "correct classification",
+        "classified_items": 1,
+        "required_items": 10,
+        "global_cache_hit_rate": 0,
+        "global_cache_total_tokens": 44,
+        "global_cache_cached_tokens": 0
+      }
+    }
+  },
+  "{\"code\": \"i9671\", \"description\": \"Mechanical pressure gauge rated up to 300 PSI, still accurate\"}": {
+    "input": {
+      "code": "i9671",
+      "description": "Mechanical pressure gauge rated up to 300 PSI, still accurate"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 43,
+        "cached_tokens": 8,
+        "input_cost": 0.078,
+        "output_cost": 0.004,
+        "balance": 1.326,
+        "result": "correct classification",
+        "classified_items": 2,
+        "required_items": 10,
+        "global_cache_hit_rate": 9.2,
+        "global_cache_total_tokens": 87,
+        "global_cache_cached_tokens": 8
+      }
+    }
+  },
+  "{\"code\": \"i0173\", \"description\": \"Heavy-duty hydraulic piston from an industrial press, still functional\"}": {
+    "input": {
+      "code": "i0173",
+      "description": "Heavy-duty hydraulic piston from an industrial press, still functional"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 42,
+        "cached_tokens": 8,
+        "input_cost": 0.076,
+        "output_cost": 0.004,
+        "balance": 1.246,
+        "result": "correct classification",
+        "classified_items": 3,
+        "required_items": 10,
+        "global_cache_hit_rate": 12.4,
+        "global_cache_total_tokens": 129,
+        "global_cache_cached_tokens": 16
+      }
+    }
+  },
+  "{\"code\": \"i8549\", \"description\": \"Voltage regulator board stripped from a military-grade UPS system\"}": {
+    "input": {
+      "code": "i8549",
+      "description": "Voltage regulator board stripped from a military-grade UPS system"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 43,
+        "cached_tokens": 8,
+        "input_cost": 0.078,
+        "output_cost": 0.004,
+        "balance": 1.164,
+        "result": "correct classification",
+        "classified_items": 4,
+        "required_items": 10,
+        "global_cache_hit_rate": 13.95,
+        "global_cache_total_tokens": 172,
+        "global_cache_cached_tokens": 24
+      }
+    }
+  },
+  "{\"code\": \"i3061\", \"description\": \"Bicycle chain and derailleur mechanism in working condition\"}": {
+    "input": {
+      "code": "i3061",
+      "description": "Bicycle chain and derailleur mechanism in working condition"
+    },
+    "response": {
+      "code": 1,
+      "message": "ACCEPTED",
+      "debug": {
+        "output": "NEU",
+        "tokens": 41,
+        "cached_tokens": 8,
+        "input_cost": 0.074,
+        "output_cost": 0.004,
+        "balance": 1.086,
+        "result": "correct classification",
+        "classified_items": 5,
+        "required_items": 10,
+        "global_cache_hit_rate": 15.02,
+        "global_cache_total_tokens": 213,
+        "global_cache_cached_tokens": 32
+      }
+    }
   }
 }
