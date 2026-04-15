@@ -96,6 +96,7 @@ API_PARSERS = {
     "json": _parse_json,
     "csv": _parse_csv,
     "text": _parse_text,
+    "png": None,  # binary — handled specially in api_get
 }
 
 
@@ -111,7 +112,12 @@ def api_get(path, parser="json"):
         Parsed response data.
     """
     with urllib.request.urlopen(f"{BASE_URL}{path}") as resp:
-        content = resp.read().decode('utf-8')
+        raw = resp.read()
+
+    if parser == "png":
+        return raw
+
+    content = raw.decode('utf-8')
 
     if callable(parser):
         return parser(content)
