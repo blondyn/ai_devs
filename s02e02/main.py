@@ -1,12 +1,13 @@
 import base64
 import os
+import json
 from datetime import datetime
 
 from common import api_get, get_api_key, llm_vision_call
 from endpoints import DATA_ELECTRICITY, DATA_ELECTRICITY_SOLUTION
 
 API_KEY = get_api_key()
-OUTPUT_DIR = os.path.dirname(__file__)
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "images")
 PROMPT = """
 You are a classifier system that can classify maze on the image. The image is a 2D grid with 3 rows and 3 columns.
 
@@ -33,6 +34,7 @@ SCHEMA = {
     "type": "json_schema",
     "json_schema": {
         "name": "grid_classification",
+        "strict": True,
         "schema": {
             "type": "object",
             "properties": {
@@ -43,15 +45,17 @@ SCHEMA = {
                         "items": {
                             "type": "object",
                             "properties": {
-                                "type": {"type": "string", "enum": ["I", "L", "T"]},
-                                "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
+                                "letter": {"type": "string"},
+                                "rotation": {"type": "integer"},
                             },
-                            "required": ["type", "rotation"],
+                            "required": ["letter", "rotation"],
+                            "additionalProperties": False,
                         },
                     },
                 },
             },
             "required": ["rows"],
+            "additionalProperties": False,
         },
     },
 }
@@ -91,7 +95,7 @@ def main():
     save(solution, "electricity_solution.png")
 
     result = analyze_image(data)
-    print(result)
+    print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":
