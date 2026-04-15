@@ -91,7 +91,7 @@ def analyze_image(image_data):
 def main():
     data = api_get(DATA_ELECTRICITY.format(api_key=API_KEY), "png")
     solution = api_get(DATA_ELECTRICITY_SOLUTION.format(api_key=API_KEY), "png")
-    save(data, "electricity.png", include_timestamp=True)
+    save(data, "electricity.png")
     save(solution, "electricity_solution.png")
 
     result = analyze_image(data)
