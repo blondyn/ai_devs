@@ -2,11 +2,15 @@ import base64
 import io
 import os
 import json
+import logging
 
 from PIL import Image
 
 from common import api_get, get_api_key, llm_vision_call
 from endpoints import DATA_ELECTRICITY, DATA_ELECTRICITY_SOLUTION
+
+logger = logging.getLogger(__name__)
+# logger.setLevel(logging.WARNING)
 
 API_KEY = get_api_key()
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "images")
@@ -41,32 +45,21 @@ def preprocess(data, threshold=128, margin=15, padding=10):
     padded = Image.new("1", (img.width + 2 * padding, img.height + 2 * padding), 1)
     padded.paste(img, (padding, padding))
     return to_png_bytes(padded)
-PROMPT = """Classify this pipe segment as I, L, or T with its rotation (0, 90, 180, or 270 degrees clockwise). The image is in black, the background is white.
 
-I: straight line. 0° = vertical, 90° = horizontal.
 
-L: corner/elbow. 0° = arms go right and up (standard L). 90° = arms go right and down. 180° = arms go left and down. 270° = arms go left and up.
+PROMPT = """Look at this pipe segment image. The top of the image is UP.
 
-T: T-junction. 0° = top bar horizontal, stem goes down. 90° = bar vertical, stem goes left. 180° = bottom bar horizontal, stem goes up. 270° = bar vertical, stem goes right.
-"""
+Step 1: Does a line extend UP from center? (yes/no)
+Step 2: Does a line extend DOWN from center? (yes/no)
+Step 3: Does a line extend LEFT from center? (yes/no)
+Step 4: Does a line extend RIGHT from center? (yes/no)
 
-PROMPT_ASCII = """Classify this pipe segment as I, L, or T with its rotation.
-Match the angle with the provided character with the best probability. Do 2 runs for each where probability is <60%
-I (straight):
-  0°:  |     90°: ──
+Step 5: Based on your answers, match to one of these symbols:
+│ = up+down    ── = left+right
+┗ = up+right   ┏ = down+right   ┓ = down+left   ┛ = up+left
+┳ = left+right+down   ┫ = up+down+left   ┻ = left+right+up   ┣ = up+down+right
 
-L (corner):
-  0°:  ┗     90°: ┏     180°: ┓      270°: ┛
-
-T (T-junction):
-  0°:  T    90°:  ⊣      180°:  ⊥     270°: ├
-"""
-
-PROMPT_ASCII_ALT = """Match the pipe segment in the image to one of these symbols:
-
-│  ──  ┗  ┏  ┓  ┛  ┬  ┤  ┴  ├
-
-Return the symbol that best matches the shape in the image.
+Return the matching symbol.
 """
 
 SYMBOL_TO_CELL = {
@@ -76,10 +69,10 @@ SYMBOL_TO_CELL = {
     "┏":  {"letter": "L", "rotation": 90},
     "┓":  {"letter": "L", "rotation": 180},
     "┛":  {"letter": "L", "rotation": 270},
-    "┬":  {"letter": "T", "rotation": 0},
-    "┤":  {"letter": "T", "rotation": 90},
-    "┴":  {"letter": "T", "rotation": 180},
-    "├":  {"letter": "T", "rotation": 270},
+    "┳":  {"letter": "T", "rotation": 0},
+    "┫":  {"letter": "T", "rotation": 90},
+    "┻":  {"letter": "T", "rotation": 180},
+    "┣":  {"letter": "T", "rotation": 270},
 }
 
 SYMBOL_SCHEMA = {
@@ -90,40 +83,13 @@ SYMBOL_SCHEMA = {
         "schema": {
             "type": "object",
             "properties": {
+                "up": {"type": "boolean"},
+                "down": {"type": "boolean"},
+                "left": {"type": "boolean"},
+                "right": {"type": "boolean"},
                 "symbol": {"type": "string"},
             },
-            "required": ["symbol"],
-            "additionalProperties": False,
-        },
-    },
-}
-
-
-SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "grid_classification",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "rows": {
-                    "type": "array",
-                    "items": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "letter": {"type": "string"},
-                                "rotation": {"type": "integer"},
-                            },
-                            "required": ["letter", "rotation"],
-                            "additionalProperties": False,
-                        },
-                    },
-                },
-            },
-            "required": ["rows"],
+            "required": ["up", "down", "left", "right", "symbol"],
             "additionalProperties": False,
         },
     },
@@ -135,9 +101,7 @@ def save(data, name):
     if not os.path.exists(path):
         with open(path, "wb") as f:
             f.write(data)
-        print(f"Saved {len(data)} bytes to {path}")
-
-
+        logger.info(f"Saved {len(data)} bytes to {path}")
 
 
 GRID_SCHEMA = {
@@ -170,24 +134,6 @@ Return the coordinates as fractions of the image dimensions (0.0 to 1.0):
 - height_pct: grid height as fraction of image height"""
 
 
-CELL_SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "cell_classification",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "letter": {"type": "string"},
-                "rotation": {"type": "integer"},
-            },
-            "required": ["letter", "rotation"],
-            "additionalProperties": False,
-        },
-    },
-}
-
-
 def vision_call(image_data, prompt, schema, model=None):
     """Send image + prompt to LLM with structured output."""
     kwargs = {"schema": schema}
@@ -204,7 +150,7 @@ def vision_call(image_data, prompt, schema, model=None):
 def detect_grid(image_data):
     """Ask LLM to find the 3x3 grid bounding box as relative coordinates."""
     bounds = vision_call(image_data, GRID_DETECT_PROMPT, GRID_SCHEMA)
-    print(f"Raw LLM bounds: {bounds}")
+    logger.info(f"Raw LLM bounds: {bounds}")
 
     # Normalize: if LLM returned 0-100 instead of 0.0-1.0, convert
     vals = [bounds["x_pct"], bounds["y_pct"], bounds["width_pct"], bounds["height_pct"]]
@@ -220,26 +166,8 @@ def detect_grid(image_data):
     }
 
 
-def split_grid(image_data, grid_bounds):
-    """Split image into 3x3 cells using detected grid bounds."""
-    img = open_image(image_data)
-    gx, gy, gw, gh = grid_bounds["x"], grid_bounds["y"], grid_bounds["width"], grid_bounds["height"]
-    cell_w, cell_h = gw // 3, gh // 3
-    cells = []
-    for r in range(3):
-        row = []
-        for c in range(3):
-            box = (gx + c * cell_w, gy + r * cell_h, gx + (c + 1) * cell_w, gy + (r + 1) * cell_h)
-            row.append(preprocess(to_png_bytes(img.crop(box))))
-        cells.append(row)
-    return cells
-
-
-def analyze_image(image_data, prompt=PROMPT_ASCII, model=None):
+def analyze_image(image_data, model=None):
     """Split grid_only image into 3x3 cells, preprocess and classify each."""
-    use_symbol = prompt is PROMPT_ASCII_ALT
-    schema = SYMBOL_SCHEMA if use_symbol else CELL_SCHEMA
-
     img = open_image(image_data)
     w, h = img.size
     cell_w, cell_h = w // 3, h // 3
@@ -262,12 +190,11 @@ def analyze_image(image_data, prompt=PROMPT_ASCII, model=None):
     for r in range(3):
         row_results = []
         for c in range(3):
-            result = vision_call(cells[r][c], prompt, schema, model=model)
-            if use_symbol:
-                symbol = result["symbol"]
-                result = SYMBOL_TO_CELL.get(symbol, {"letter": "?", "rotation": 0})
-                print(f"  Cell ({r},{c}): {symbol} -> {result}")
-            row_results.append(result)
+            result = vision_call(cells[r][c], PROMPT, SYMBOL_SCHEMA, model=model)
+            symbol = result["symbol"]
+            cell = SYMBOL_TO_CELL.get(symbol, {"letter": "?", "rotation": 0})
+            logger.info(f"  Cell ({r},{c}): {symbol} -> {cell}")
+            row_results.append(cell)
         results.append(row_results)
     return results
 
@@ -275,7 +202,7 @@ def analyze_image(image_data, prompt=PROMPT_ASCII, model=None):
 def extract_grid(image_data, name):
     """Detect grid in image, crop it, save, and return the cropped PNG bytes."""
     grid_bounds = detect_grid(image_data)
-    print(f"{name} grid bounds: {grid_bounds}")
+    logger.info(f"{name} grid bounds: {grid_bounds}")
     cropped = to_png_bytes(open_image(image_data).crop((
         grid_bounds["x"], grid_bounds["y"],
         grid_bounds["x"] + grid_bounds["width"],
@@ -297,12 +224,21 @@ def compute_delta(problem, solution):
                 row.append({"letter": p["letter"], "error": f"letter mismatch: {p['letter']} vs {s['letter']}"})
             else:
                 rot_diff = (s["rotation"] - p["rotation"]) % 360
+                # I looks the same at 0/180 and 90/270, so minimize rotations
+                if p["letter"] == "I" and rot_diff == 180:
+                    rot_diff = 0
+                elif p["letter"] == "I" and rot_diff == 270:
+                    rot_diff = 90
                 row.append({"letter": p["letter"], "current": p["rotation"], "target": s["rotation"], "delta": rot_diff})
         delta.append(row)
     return delta
 
 
 def main():
+    # Reset the puzzle state
+    api_get(DATA_ELECTRICITY.format(api_key=API_KEY) + "?reset=1", "png")
+    logger.info("Puzzle reset.")
+
     data = api_get(DATA_ELECTRICITY.format(api_key=API_KEY), "png")
     solution_data = api_get(DATA_ELECTRICITY_SOLUTION.format(api_key=API_KEY), "png")
     save(data, "electricity.png")
@@ -311,18 +247,25 @@ def main():
     problem_grid = extract_grid(data, "problem")
     solution_grid = extract_grid(solution_data, "solution")
 
-    print("\n--- Analyzing problem grid ---")
-    problem = analyze_image(problem_grid, prompt=PROMPT_ASCII_ALT, model="anthropic/claude-opus-4.7")
-    print(json.dumps(problem, indent=2))
+    logger.info("\n--- Analyzing problem grid ---")
+    problem = analyze_image(problem_grid, model="anthropic/claude-opus-4.7")
+    # logger.info(json.dumps(problem, indent=2))
 
-    print("\n--- Analyzing solution grid ---")
-    solution = analyze_image(solution_grid, prompt=PROMPT_ASCII_ALT, model="anthropic/claude-opus-4.7")
-    print(json.dumps(solution, indent=2))
+    logger.info("\n--- Analyzing solution grid ---")
+    solution = analyze_image(solution_grid, model="anthropic/claude-opus-4.7")
+    # logger.info(json.dumps(solution, indent=2))
 
-    print("\n--- Rotation delta (how much to rotate each cell) ---")
+    logger.info("\n--- Rotation delta (how much to rotate each cell) ---")
     delta = compute_delta(problem, solution)
-    print(json.dumps(delta, indent=2))
+    # logger.info(json.dumps(delta, indent=2))
+
+    logger.info("\n--- Sending solution ---")
+    from s02e02.send_solution import send_solution
+    responses = send_solution(delta, API_KEY)
+    for r in responses:
+        logger.info(r)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     main()
