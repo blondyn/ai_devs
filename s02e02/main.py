@@ -1,13 +1,29 @@
 import base64
+import io
 import os
 import json
-from datetime import datetime
+
+from PIL import Image
 
 from common import api_get, get_api_key, llm_vision_call
 from endpoints import DATA_ELECTRICITY, DATA_ELECTRICITY_SOLUTION
 
 API_KEY = get_api_key()
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "images")
+
+
+def open_image(data):
+    return Image.open(io.BytesIO(data))
+
+
+def to_png_bytes(img):
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def to_b64(data):
+    return base64.b64encode(data).decode()
 PROMPT = """
 You are a classifier system that can classify maze on the image. The image is a 2D grid with 3 rows and 3 columns.
 
@@ -61,15 +77,8 @@ SCHEMA = {
 }
 
 
-def save(data, name, include_timestamp=False):
-    timestamp = datetime.now().strftime("%Y%m%d%H%M")
-    if include_timestamp:
-        filename = f"{timestamp}_{name}"
-    else:
-        filename = f"{name}"
-
-
-    path = os.path.join(OUTPUT_DIR, filename)
+def save(data, name):
+    path = os.path.join(OUTPUT_DIR, name)
     if not os.path.exists(path):
         with open(path, "wb") as f:
             f.write(data)
@@ -78,14 +87,113 @@ def save(data, name, include_timestamp=False):
 
 
 
-def analyze_image(image_data):
-    img_b64 = base64.b64encode(image_data).decode()
+GRID_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "grid_bounds",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "x_pct": {"type": "number", "description": "Left edge as fraction 0.0-1.0"},
+                "y_pct": {"type": "number", "description": "Top edge as fraction 0.0-1.0"},
+                "width_pct": {"type": "number", "description": "Width as fraction 0.0-1.0"},
+                "height_pct": {"type": "number", "description": "Height as fraction 0.0-1.0"},
+            },
+            "required": ["x_pct", "y_pct", "width_pct", "height_pct"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+GRID_DETECT_PROMPT = """Look at this image. There is a 3x3 grid of cells containing pipe/maze segments drawn with thin black lines.
+
+Find the bounding box of just the 3x3 inner grid area (excluding any labels, icons, or text outside the grid).
+
+Return the coordinates as fractions of the image dimensions (0.0 to 1.0):
+- x_pct: left edge as fraction of image width
+- y_pct: top edge as fraction of image height
+- width_pct: grid width as fraction of image width
+- height_pct: grid height as fraction of image height"""
+
+
+CELL_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "cell_classification",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "letter": {"type": "string"},
+                "rotation": {"type": "integer"},
+            },
+            "required": ["letter", "rotation"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
+def vision_call(image_data, prompt, schema):
+    """Send image + prompt to LLM with structured output."""
     return llm_vision_call([
         {"role": "user", "content": [
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}},
-            {"type": "text", "text": PROMPT},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{to_b64(image_data)}"}},
+            {"type": "text", "text": prompt},
         ]}
-    ], schema=SCHEMA)
+    ], schema=schema)
+
+
+def detect_grid(image_data):
+    """Ask LLM to find the 3x3 grid bounding box as relative coordinates."""
+    bounds = vision_call(image_data, GRID_DETECT_PROMPT, GRID_SCHEMA)
+    w, h = open_image(image_data).size
+    return {
+        "x": int(bounds["x_pct"] * w),
+        "y": int(bounds["y_pct"] * h),
+        "width": int(bounds["width_pct"] * w),
+        "height": int(bounds["height_pct"] * h),
+    }
+
+
+def split_grid(image_data, grid_bounds):
+    """Split image into 3x3 cells using detected grid bounds."""
+    img = open_image(image_data)
+    gx, gy, gw, gh = grid_bounds["x"], grid_bounds["y"], grid_bounds["width"], grid_bounds["height"]
+    cell_w, cell_h = gw // 3, gh // 3
+    cells = []
+    for r in range(3):
+        row = []
+        for c in range(3):
+            box = (gx + c * cell_w, gy + r * cell_h, gx + (c + 1) * cell_w, gy + (r + 1) * cell_h)
+            row.append(to_png_bytes(img.crop(box)))
+        cells.append(row)
+    return cells
+
+
+def analyze_image(image_data):
+    """Detect grid bounds, split into 3x3 cells, classify each."""
+    grid_bounds = detect_grid(image_data)
+    print(f"Detected grid bounds: {grid_bounds}")
+
+    cells = split_grid(image_data, grid_bounds)
+
+    # Save individual cells for debugging
+    for r, row in enumerate(cells):
+        for c, cell in enumerate(row):
+            save(cell, f"cell_{r}_{c}.png")
+
+    # Classify each cell
+    results = []
+    for r in range(3):
+        row_results = []
+        for c in range(3):
+            result = vision_call(cells[r][c], PROMPT, CELL_SCHEMA)
+            print(f"  Cell ({r},{c}): {result}")
+            row_results.append(result)
+        results.append(row_results)
+    return {"rows": results}
 
 
 def main():
@@ -94,8 +202,14 @@ def main():
     save(data, "electricity.png")
     save(solution, "electricity_solution.png")
 
-    result = analyze_image(data)
-    print(json.dumps(result, indent=2))
+    grid_bounds = detect_grid(data)
+    print(f"Detected grid bounds: {grid_bounds}")
+
+    save(to_png_bytes(open_image(data).crop((
+        grid_bounds["x"], grid_bounds["y"],
+        grid_bounds["x"] + grid_bounds["width"],
+        grid_bounds["y"] + grid_bounds["height"],
+    ))), "grid_only.png")
 
 
 if __name__ == "__main__":
