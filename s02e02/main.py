@@ -8,6 +8,8 @@ from PIL import Image
 
 from common import api_get, get_api_key, llm_vision_call
 from endpoints import DATA_ELECTRICITY, DATA_ELECTRICITY_SOLUTION
+from s02e02.prompts import CELL_PROMPT, GRID_DETECT_PROMPT
+from s02e02.schemas import SYMBOL_SCHEMA, GRID_SCHEMA, SYMBOL_TO_CELL
 
 logger = logging.getLogger(__name__)
 # logger.setLevel(logging.WARNING)
@@ -46,56 +48,6 @@ def preprocess(data, threshold=128, margin=15, padding=10):
     padded.paste(img, (padding, padding))
     return to_png_bytes(padded)
 
-
-PROMPT = """Look at this pipe segment image. The top of the image is UP.
-
-Step 1: Does a line extend UP from center? (yes/no)
-Step 2: Does a line extend DOWN from center? (yes/no)
-Step 3: Does a line extend LEFT from center? (yes/no)
-Step 4: Does a line extend RIGHT from center? (yes/no)
-
-Step 5: Based on your answers, match to one of these symbols:
-│ = up+down    ── = left+right
-┗ = up+right   ┏ = down+right   ┓ = down+left   ┛ = up+left
-┳ = left+right+down   ┫ = up+down+left   ┻ = left+right+up   ┣ = up+down+right
-
-Return the matching symbol.
-"""
-
-SYMBOL_TO_CELL = {
-    "│":  {"letter": "I", "rotation": 0},
-    "──": {"letter": "I", "rotation": 90},
-    "┗":  {"letter": "L", "rotation": 0},
-    "┏":  {"letter": "L", "rotation": 90},
-    "┓":  {"letter": "L", "rotation": 180},
-    "┛":  {"letter": "L", "rotation": 270},
-    "┳":  {"letter": "T", "rotation": 0},
-    "┫":  {"letter": "T", "rotation": 90},
-    "┻":  {"letter": "T", "rotation": 180},
-    "┣":  {"letter": "T", "rotation": 270},
-}
-
-SYMBOL_SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "symbol_match",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "up": {"type": "boolean"},
-                "down": {"type": "boolean"},
-                "left": {"type": "boolean"},
-                "right": {"type": "boolean"},
-                "symbol": {"type": "string"},
-            },
-            "required": ["up", "down", "left", "right", "symbol"],
-            "additionalProperties": False,
-        },
-    },
-}
-
-
 def save(data, name):
     path = os.path.join(OUTPUT_DIR, name)
     if not os.path.exists(path):
@@ -104,34 +56,7 @@ def save(data, name):
         logger.info(f"Saved {len(data)} bytes to {path}")
 
 
-GRID_SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "grid_bounds",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "x_pct": {"type": "number", "description": "Left edge as fraction 0.0-1.0"},
-                "y_pct": {"type": "number", "description": "Top edge as fraction 0.0-1.0"},
-                "width_pct": {"type": "number", "description": "Width as fraction 0.0-1.0"},
-                "height_pct": {"type": "number", "description": "Height as fraction 0.0-1.0"},
-            },
-            "required": ["x_pct", "y_pct", "width_pct", "height_pct"],
-            "additionalProperties": False,
-        },
-    },
-}
 
-GRID_DETECT_PROMPT = """Look at this image. There is a 3x3 grid of cells containing pipe/maze segments drawn with thin black lines.
-
-Find the bounding box of just the 3x3 inner grid area (excluding any labels, icons, or text outside the grid).
-
-Return the coordinates as fractions of the image dimensions (0.0 to 1.0):
-- x_pct: left edge as fraction of image width
-- y_pct: top edge as fraction of image height
-- width_pct: grid width as fraction of image width
-- height_pct: grid height as fraction of image height"""
 
 
 def vision_call(image_data, prompt, schema, model=None):
@@ -190,7 +115,7 @@ def analyze_image(image_data, model=None):
     for r in range(3):
         row_results = []
         for c in range(3):
-            result = vision_call(cells[r][c], PROMPT, SYMBOL_SCHEMA, model=model)
+            result = vision_call(cells[r][c], CELL_PROMPT, SYMBOL_SCHEMA, model=model)
             symbol = result["symbol"]
             cell = SYMBOL_TO_CELL.get(symbol, {"letter": "?", "rotation": 0})
             logger.info(f"  Cell ({r},{c}): {symbol} -> {cell}")
@@ -248,11 +173,11 @@ def main():
     solution_grid = extract_grid(solution_data, "solution")
 
     logger.info("\n--- Analyzing problem grid ---")
-    problem = analyze_image(problem_grid, model="anthropic/claude-opus-4.7")
+    problem = analyze_image(problem_grid)
     # logger.info(json.dumps(problem, indent=2))
 
     logger.info("\n--- Analyzing solution grid ---")
-    solution = analyze_image(solution_grid, model="anthropic/claude-opus-4.7")
+    solution = analyze_image(solution_grid)
     # logger.info(json.dumps(solution, indent=2))
 
     logger.info("\n--- Rotation delta (how much to rotate each cell) ---")
