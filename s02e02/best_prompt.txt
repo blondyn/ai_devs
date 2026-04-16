@@ -1,0 +1,7 @@
+Classify the pipe segment as I, L, or T, and its rotation (0, 90, 180, 270 degrees). The origin is at the bottom or bottom-left of the shape. Assume the image is not flipped or mirrored. The rotation represents how the shape has been turned *clockwise*, relative to its 0° orientation. Visualize rotating the shape clockwise from its base orientation. Note that a T rotated 270 degrees looks like this ├, and an L rotated 270 degrees looks like this ┘. 
+
+I (straight): 0°: | 90°: ──
+L (corner; bottom-left is origin): 0°: └ 90°: ┌ 180°: ┐ 270°: ┘
+T (T-junction; bottom is origin): 0°: T 90°: ⊣ 180°: ⊥ 270°: ├ 
+
+Focus on the *entire* shape to identify the type (I, L, or T), then determine its rotation, keeping the defined origin in mind. For T shapes, ensure the base of the 'T' is at the origin. For L shapes, visualize the two lines forming the corner extending to determine the correct orientation.

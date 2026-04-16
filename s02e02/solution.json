@@ -1,0 +1,5 @@
+[
+    [{"letter": "L", "rotation": 90}, {"letter": "T", "rotation": 270}, {"letter": "I", "rotation": 0}],
+    [{"letter": "I", "rotation": 90}, {"letter": "T", "rotation": 0}, {"letter": "T", "rotation": 0}],
+    [{"letter": "T", "rotation": 90}, {"letter": "L", "rotation": 270}, {"letter": "L", "rotation": 0}]
+]

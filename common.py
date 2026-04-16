@@ -190,7 +190,7 @@ def llm_call(messages, schema, max_tokens=1024, model="google/gemini-2.0-flash-0
 
 def llm_vision_call(messages, schema=None, max_tokens=1024, model="google/gemini-3-flash-preview"):
     """LLM call with vision support. Returns parsed JSON if schema given, else string."""
-    return llm(messages, schema=schema, max_tokens=max_tokens, model=model)
+    return llm(messages, schema=schema, max_tokens=max_tokens, model=model, temperature=0.1)
 
 def agent_loop(messages, tools, tool_handlers, max_iterations=10,
                model="google/gemini-2.0-flash-001", temperature=None, max_tokens=2048,
