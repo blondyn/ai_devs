@@ -16,6 +16,11 @@ def open_image(data):
     return Image.open(io.BytesIO(data))
 
 
+def load_png(path):
+    with open(path, "rb") as f:
+        return f.read()
+
+
 def to_png_bytes(img):
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -24,26 +29,38 @@ def to_png_bytes(img):
 
 def to_b64(data):
     return base64.b64encode(data).decode()
-PROMPT = """
-You are a classifier system that can classify maze on the image. The image is a 2D grid with 3 rows and 3 columns.
 
-You have to categorize the image cells into 3 different types:
-- letter I - a straight vertical line
-- letter L - a corner with 90deg
-- letter T - three way junction
 
-The letters can be rotated around the clock in 90 degrees with the anchor in the center of the cell.
+def preprocess(data, threshold=128, margin=15):
+    """Convert image to clean black & white, crop margins to remove grid lines."""
+    img = open_image(data)
+    w, h = img.size
+    img = img.crop((margin, margin, w - margin, h - margin))
+    img = img.convert("L")
+    img = img.point(lambda x: 255 if x > threshold else 0, "1")
+    return to_png_bytes(img)
+PROMPT = """Classify this pipe segment as I, L, or T with its rotation (0, 90, 180, or 270 degrees clockwise).
 
-Analyze the provided image and give me a response for each row with their respective letter rotation for each cell.
+I: straight line. 0° = vertical, 90° = horizontal.
 
-The response should be returned in the following format with array(cells) within array (rows)
+L: corner/elbow. 0° = arms go right and up (standard L). 90° = arms go right and down. 180° = arms go left and down. 270° = arms go left and up.
 
-[
-    [{T, 90}, {I,0},{T, 270}], // row1
-    [{T, 90}, {I,0},{T, 270}] // row2
-    [{T, 90}, {I,0},{T, 270}] // row3
-]
+T: T-junction. 0° = top bar horizontal, stem goes down. 90° = bar vertical, stem goes left. 180° = bottom bar horizontal, stem goes up. 270° = bar vertical, stem goes right.
+"""
 
+PROMPT_ASCII = """Classify this pipe segment as I, L, or T with its rotation.
+
+I (straight):
+  0°:  |     90°: ───
+       |
+
+L (corner):
+  0°:  └──     90°: ┌──     180°: ──┐      270°: ──┘
+
+T (T-junction):
+  0°:  ───    90°:  |     180°:  |     270°: |
+        |         ──┤           ├──         ├──
+                    |            |           |
 """
 
 SCHEMA = {
@@ -167,29 +184,36 @@ def split_grid(image_data, grid_bounds):
         row = []
         for c in range(3):
             box = (gx + c * cell_w, gy + r * cell_h, gx + (c + 1) * cell_w, gy + (r + 1) * cell_h)
-            row.append(to_png_bytes(img.crop(box)))
+            row.append(preprocess(to_png_bytes(img.crop(box))))
         cells.append(row)
     return cells
 
 
 def analyze_image(image_data):
-    """Detect grid bounds, split into 3x3 cells, classify each."""
-    grid_bounds = detect_grid(image_data)
-    print(f"Detected grid bounds: {grid_bounds}")
+    """Split grid_only image into 3x3 cells, preprocess and classify each."""
+    img = open_image(image_data)
+    w, h = img.size
+    cell_w, cell_h = w // 3, h // 3
+    cells = []
+    for r in range(3):
+        row = []
+        for c in range(3):
+            box = (c * cell_w, r * cell_h, (c + 1) * cell_w, (r + 1) * cell_h)
+            cell = preprocess(to_png_bytes(img.crop(box)))
+            row.append(cell)
+        cells.append(row)
 
-    cells = split_grid(image_data, grid_bounds)
-
-    # Save individual cells for debugging
+    # Save preprocessed cells for debugging
     for r, row in enumerate(cells):
         for c, cell in enumerate(row):
-            save(cell, f"cell_{r}_{c}.png")
+            save(cell, f"debug_cell_{r}_{c}.png")
 
     # Classify each cell
     results = []
     for r in range(3):
         row_results = []
         for c in range(3):
-            result = vision_call(cells[r][c], PROMPT, CELL_SCHEMA)
+            result = vision_call(cells[r][c], PROMPT_ASCII, CELL_SCHEMA)
             print(f"  Cell ({r},{c}): {result}")
             row_results.append(result)
         results.append(row_results)
@@ -210,6 +234,8 @@ def main():
         grid_bounds["x"] + grid_bounds["width"],
         grid_bounds["y"] + grid_bounds["height"],
     ))), "grid_only.png")
+
+    analyze_image(load_png(os.path.join(OUTPUT_DIR,"grid_only.png")))
 
 
 if __name__ == "__main__":
