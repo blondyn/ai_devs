@@ -1,15 +1,14 @@
-import io
 import json
 import os
 
 from PIL import Image, ImageDraw
 
 from common import llm_vision_call, llm
-from s02e02.main import (
-    open_image, to_png_bytes, to_b64, preprocess, load_png,
-    CELL_SCHEMA, PROMPT_ASCII, OUTPUT_DIR,
-)
+from s02e02.image_utils import to_png_bytes, to_b64, load_png, split_grid_cells
+from s02e02.prompts import CELL_PROMPT
+from s02e02.schemas import SYMBOL_SCHEMA, SYMBOL_TO_CELL
 
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "images")
 SOLUTION_FILE = os.path.join(os.path.dirname(__file__), "solution.json")
 GRID_IMAGE = os.path.join(OUTPUT_DIR, "grid_only.png")
 MAX_ITERATIONS = 10
@@ -33,27 +32,21 @@ PROMPT_IMPROVE_SCHEMA = {
 
 def draw_reference(letter, rotation, size=100, line_width=6):
     """Generate a reference image for a letter at a given rotation."""
-    img = Image.new("1", (size, size), 1)  # white background
+    img = Image.new("1", (size, size), 1)
     draw = ImageDraw.Draw(img)
     mid = size // 2
 
-    # Draw segments based on letter type at 0° then rotate
-    # At 0°: I=vertical, L=arms right+up, T=top bar + stem down
     if letter == "I":
-        # vertical line
         draw.line([(mid, 0), (mid, size)], fill=0, width=line_width)
     elif letter == "L":
-        # arm up + arm right
         draw.line([(mid, 0), (mid, mid)], fill=0, width=line_width)
         draw.line([(mid, mid), (size, mid)], fill=0, width=line_width)
     elif letter == "T":
-        # horizontal top bar + stem down
         draw.line([(0, mid), (size, mid)], fill=0, width=line_width)
         draw.line([(mid, mid), (mid, size)], fill=0, width=line_width)
 
-    # Rotate by the specified angle
     if rotation:
-        img = img.rotate(-rotation, expand=False)  # negative = clockwise
+        img = img.rotate(-rotation, expand=False)
 
     return to_png_bytes(img)
 
@@ -72,33 +65,19 @@ def load_solution():
         return json.load(f)
 
 
-def split_and_preprocess(grid_data):
-    """Split grid_only image into 3x3 preprocessed cells."""
-    img = open_image(grid_data)
-    w, h = img.size
-    cell_w, cell_h = w // 3, h // 3
-    cells = []
-    for r in range(3):
-        row = []
-        for c in range(3):
-            box = (c * cell_w, r * cell_h, (c + 1) * cell_w, (r + 1) * cell_h)
-            cell = preprocess(to_png_bytes(img.crop(box)))
-            row.append(cell)
-        cells.append(row)
-    return cells
-
-
 def classify_cell(cell_data, prompt, model=None):
     """Send a single cell to LLM for classification."""
-    kwargs = {"schema": CELL_SCHEMA}
+    kwargs = {"schema": SYMBOL_SCHEMA}
     if model:
         kwargs["model"] = model
-    return llm_vision_call([
+    result = llm_vision_call([
         {"role": "user", "content": [
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{to_b64(cell_data)}"}},
             {"type": "text", "text": prompt},
         ]}
     ], **kwargs)
+    symbol = result["symbol"]
+    return SYMBOL_TO_CELL.get(symbol, {"letter": "?", "rotation": 0})
 
 
 def evaluate(cells, solution, prompt):
@@ -162,9 +141,9 @@ Improve the prompt so the vision model classifies these correctly. Keep the prom
 def main():
     solution = load_solution()
     grid_data = load_png(GRID_IMAGE)
-    cells = split_and_preprocess(grid_data)
+    cells = split_grid_cells(grid_data)
     refs = generate_all_references()
-    prompt = PROMPT_ASCII
+    prompt = CELL_PROMPT
 
     for i in range(MAX_ITERATIONS):
         print(f"\n=== Iteration {i + 1}/{MAX_ITERATIONS} ===")

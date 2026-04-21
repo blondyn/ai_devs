@@ -1,62 +1,20 @@
-import base64
-import io
-import os
 import json
 import logging
-
-from PIL import Image
+import os
 
 from common import api_get, get_api_key, llm_vision_call
 from endpoints import DATA_ELECTRICITY, DATA_ELECTRICITY_SOLUTION
+from s02e02.image_utils import (
+    open_image, load_png, to_png_bytes, to_b64,
+    save, split_grid_cells,
+)
 from s02e02.prompts import CELL_PROMPT, GRID_DETECT_PROMPT
 from s02e02.schemas import SYMBOL_SCHEMA, GRID_SCHEMA, SYMBOL_TO_CELL
 
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.WARNING)
 
 API_KEY = get_api_key()
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "images")
-
-
-def open_image(data):
-    return Image.open(io.BytesIO(data))
-
-
-def load_png(path):
-    with open(path, "rb") as f:
-        return f.read()
-
-
-def to_png_bytes(img):
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
-
-
-def to_b64(data):
-    return base64.b64encode(data).decode()
-
-
-def preprocess(data, threshold=128, margin=15, padding=10):
-    """Convert image to clean black & white, crop margins and add white padding."""
-    img = open_image(data)
-    w, h = img.size
-    img = img.crop((margin, margin, w - margin, h - margin))
-    img = img.convert("L")
-    img = img.point(lambda x: 255 if x > threshold else 0, "1")
-    padded = Image.new("1", (img.width + 2 * padding, img.height + 2 * padding), 1)
-    padded.paste(img, (padding, padding))
-    return to_png_bytes(padded)
-
-def save(data, name):
-    path = os.path.join(OUTPUT_DIR, name)
-    if not os.path.exists(path):
-        with open(path, "wb") as f:
-            f.write(data)
-        logger.info(f"Saved {len(data)} bytes to {path}")
-
-
-
 
 
 def vision_call(image_data, prompt, schema, model=None):
@@ -91,24 +49,27 @@ def detect_grid(image_data):
     }
 
 
+def extract_grid(image_data, name):
+    """Detect grid in image, crop it, save, and return the cropped PNG bytes."""
+    grid_bounds = detect_grid(image_data)
+    logger.info(f"{name} grid bounds: {grid_bounds}")
+    cropped = to_png_bytes(open_image(image_data).crop((
+        grid_bounds["x"], grid_bounds["y"],
+        grid_bounds["x"] + grid_bounds["width"],
+        grid_bounds["y"] + grid_bounds["height"],
+    )))
+    save(cropped, f"{name}_grid.png", OUTPUT_DIR)
+    return cropped
+
+
 def analyze_image(image_data, model=None):
     """Split grid_only image into 3x3 cells, preprocess and classify each."""
-    img = open_image(image_data)
-    w, h = img.size
-    cell_w, cell_h = w // 3, h // 3
-    cells = []
-    for r in range(3):
-        row = []
-        for c in range(3):
-            box = (c * cell_w, r * cell_h, (c + 1) * cell_w, (r + 1) * cell_h)
-            cell = preprocess(to_png_bytes(img.crop(box)))
-            row.append(cell)
-        cells.append(row)
+    cells = split_grid_cells(image_data, should_preprocess=True)
 
     # Save preprocessed cells for debugging
     for r, row in enumerate(cells):
         for c, cell in enumerate(row):
-            save(cell, f"debug_cell_{r}_{c}.png")
+            save(cell, f"debug_cell_{r}_{c}.png", OUTPUT_DIR)
 
     # Classify each cell
     results = []
@@ -122,19 +83,6 @@ def analyze_image(image_data, model=None):
             row_results.append(cell)
         results.append(row_results)
     return results
-
-
-def extract_grid(image_data, name):
-    """Detect grid in image, crop it, save, and return the cropped PNG bytes."""
-    grid_bounds = detect_grid(image_data)
-    logger.info(f"{name} grid bounds: {grid_bounds}")
-    cropped = to_png_bytes(open_image(image_data).crop((
-        grid_bounds["x"], grid_bounds["y"],
-        grid_bounds["x"] + grid_bounds["width"],
-        grid_bounds["y"] + grid_bounds["height"],
-    )))
-    save(cropped, f"{name}_grid.png")
-    return cropped
 
 
 def compute_delta(problem, solution):
@@ -166,23 +114,20 @@ def main():
 
     data = api_get(DATA_ELECTRICITY.format(api_key=API_KEY), "png")
     solution_data = api_get(DATA_ELECTRICITY_SOLUTION.format(api_key=API_KEY), "png")
-    save(data, "electricity.png")
-    save(solution_data, "electricity_solution.png")
+    save(data, "electricity.png", OUTPUT_DIR)
+    save(solution_data, "electricity_solution.png", OUTPUT_DIR)
 
     problem_grid = extract_grid(data, "problem")
     solution_grid = extract_grid(solution_data, "solution")
 
     logger.info("\n--- Analyzing problem grid ---")
     problem = analyze_image(problem_grid)
-    # logger.info(json.dumps(problem, indent=2))
 
     logger.info("\n--- Analyzing solution grid ---")
     solution = analyze_image(solution_grid)
-    # logger.info(json.dumps(solution, indent=2))
 
     logger.info("\n--- Rotation delta (how much to rotate each cell) ---")
     delta = compute_delta(problem, solution)
-    # logger.info(json.dumps(delta, indent=2))
 
     logger.info("\n--- Sending solution ---")
     from s02e02.send_solution import send_solution

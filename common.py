@@ -1,6 +1,8 @@
 import json
 import os
+import random
 import sys
+import threading
 import uuid
 import urllib.request
 from datetime import datetime
@@ -25,6 +27,8 @@ def load_dotenv():
 load_dotenv()
 
 BASE_URL = os.environ.get("API_BASE_URL", "https://hub.ag3nts.org")
+DEFAULT_MODEL = os.environ.get("LLM_MODEL", "google/gemini-2.0-flash-001")
+DEFAULT_VISION_MODEL = os.environ.get("LLM_VISION_MODEL", "google/gemini-3-flash-preview")
 
 def get_api_key():
     key = os.environ.get('AGENTS_KEY')
@@ -128,7 +132,8 @@ def api_get(path, parser="json"):
     return parser_fn(content)
 
 def llm(messages, schema=None, tools=None, max_tokens=1024, temperature=None,
-        model="google/gemini-2.0-flash-001", raw=False):
+        model=None, raw=False):
+    model = model or DEFAULT_MODEL
     """Unified LLM call via OpenRouter. Supports structured output, tool use, and vision.
 
     Args:
@@ -183,17 +188,18 @@ def llm(messages, schema=None, tools=None, max_tokens=1024, temperature=None,
     return content
 
 
-def llm_call(messages, schema, max_tokens=1024, model="google/gemini-2.0-flash-001"):
+def llm_call(messages, schema, max_tokens=1024, model=None):
     """Structured output LLM call. Returns parsed JSON."""
     return llm(messages, schema=schema, max_tokens=max_tokens, model=model)
 
 
-def llm_vision_call(messages, schema=None, max_tokens=1024, model="google/gemini-3-flash-preview"):
+def llm_vision_call(messages, schema=None, max_tokens=1024, model=None):
+    model = model or DEFAULT_VISION_MODEL
     """LLM call with vision support. Returns parsed JSON if schema given, else string."""
     return llm(messages, schema=schema, max_tokens=max_tokens, model=model, temperature=0.1)
 
 def agent_loop(messages, tools, tool_handlers, max_iterations=10,
-               model="google/gemini-2.0-flash-001", temperature=None, max_tokens=2048,
+               model=None, temperature=None, max_tokens=2048,
                on_tool_call=None):
     """Generic agent loop: LLM calls tools until it responds with text.
 
@@ -235,6 +241,47 @@ def agent_loop(messages, tools, tool_handlers, max_iterations=10,
             })
 
     return None, messages
+
+
+_THINKING_MESSAGES = [
+    "Thinking", "Pondering", "Hmm", "Processing", "Crunching",
+    "Analyzing", "Computing", "Reflecting", "Reasoning", "Brewing",
+]
+_SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+
+class Spinner:
+    def __init__(self):
+        self._stop = threading.Event()
+        self._thread = None
+
+    def __enter__(self):
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._spin, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *_):
+        self._stop.set()
+        self._thread.join()
+        sys.stdout.write("\r\033[K")
+        sys.stdout.flush()
+
+    def _spin(self):
+        msg = random.choice(_THINKING_MESSAGES)
+        i = 0
+        while not self._stop.is_set():
+            frame = _SPINNER_FRAMES[i % len(_SPINNER_FRAMES)]
+            sys.stdout.write(f"\r{frame} {msg}...")
+            sys.stdout.flush()
+            i += 1
+            self._stop.wait(0.1)
+
+
+def interactive_agent_loop(*args, **kwargs):
+    """agent_loop with a terminal spinner while waiting for LLM responses."""
+    with Spinner():
+        return agent_loop(*args, **kwargs)
 
 
 def save_result(task_dir, data, prefix="result"):
