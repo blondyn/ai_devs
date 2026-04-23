@@ -224,7 +224,13 @@ def agent_loop(messages, tools, tool_handlers, max_iterations=10,
 
         for tc in tool_calls:
             fn_name = tc["function"]["name"]
-            fn_args = json.loads(tc["function"]["arguments"])
+            try:
+                fn_args = json.loads(tc["function"]["arguments"])
+            except json.JSONDecodeError:
+                fn_args = {}
+                result = f"Error: malformed arguments: {tc['function']['arguments']}"
+                messages.append({"role": "tool", "tool_call_id": tc["id"], "content": result})
+                continue
             handler = tool_handlers.get(fn_name)
             if handler:
                 result = handler(**fn_args)
