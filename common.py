@@ -174,8 +174,8 @@ def llm(messages, schema=None, tools=None, max_tokens=1024, temperature=None,
     try:
         resp = urllib.request.urlopen(req)
     except urllib.error.HTTPError as e:
-        print(f"HTTP Error {e.code}: {e.read().decode('utf-8')}")
-        sys.exit(1)
+        body = e.read().decode('utf-8')
+        raise ApiError(e.code, body, e.headers)
     result = json.loads(resp.read().decode('utf-8'))
     if "usage" in result:
         cost_tracker.add(result["usage"])
@@ -200,7 +200,8 @@ def llm_vision_call(messages, schema=None, max_tokens=1024, model=None):
 
 def agent_loop(messages, tools, tool_handlers, max_iterations=10,
                model=None, temperature=None, max_tokens=2048,
-               on_tool_call=None):
+               max_tool_result_chars=6000,
+               on_tool_call=None, on_iteration=None):
     """Generic agent loop: LLM calls tools until it responds with text.
 
     Args:
@@ -209,18 +210,28 @@ def agent_loop(messages, tools, tool_handlers, max_iterations=10,
         tool_handlers: Dict mapping tool name to callable.
         max_iterations: Max loop iterations before giving up.
         on_tool_call: Optional callback(name, args, result) for logging.
+        on_iteration: Optional callback(i, max_iterations) called before each LLM call.
 
     Returns:
         (answer, messages) — answer is None if max iterations reached.
     """
     for i in range(max_iterations):
-        msg = llm(messages, tools=tools, max_tokens=max_tokens,
-                  temperature=temperature, model=model, raw=True)
+        if on_iteration:
+            on_iteration(i, max_iterations)
+        try:
+            msg = llm(messages, tools=tools, max_tokens=max_tokens,
+                      temperature=temperature, model=model, raw=True)
+        except ApiError as e:
+            print(f"LLM error {e.code}: {e.body}")
+            return f"[LLM error {e.code}: {e.body}]", messages
         messages.append(msg)
 
         tool_calls = msg.get("tool_calls", [])
         if not tool_calls:
-            return msg.get("content", ""), messages
+            content = msg.get("content", "")
+            print(f"[LLM response] {content[:300]}{'...' if len(content) > 300 else ''}")
+            return content, messages
+        print(f"[LLM decided] {len(tool_calls)} tool call(s): {', '.join(tc['function']['name'] for tc in tool_calls)}")
 
         for tc in tool_calls:
             fn_name = tc["function"]["name"]
@@ -240,10 +251,13 @@ def agent_loop(messages, tools, tool_handlers, max_iterations=10,
                 result = json.dumps(result, ensure_ascii=False)
             if on_tool_call:
                 on_tool_call(fn_name, fn_args, result)
+            stored = result if len(result) <= max_tool_result_chars else (
+                result[:max_tool_result_chars] + f"\n[truncated — {len(result)} chars total]"
+            )
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc["id"],
-                "content": result,
+                "content": stored,
             })
 
     return None, messages
@@ -254,6 +268,17 @@ _THINKING_MESSAGES = [
     "Analyzing", "Computing", "Reflecting", "Reasoning", "Brewing",
 ]
 _SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+_spinner_paused = threading.Event()
+
+
+def pause_spinner():
+    _spinner_paused.set()
+    sys.stdout.write("\r\033[K")
+    sys.stdout.flush()
+
+
+def resume_spinner():
+    _spinner_paused.clear()
 
 
 class Spinner:
@@ -277,10 +302,11 @@ class Spinner:
         msg = random.choice(_THINKING_MESSAGES)
         i = 0
         while not self._stop.is_set():
-            frame = _SPINNER_FRAMES[i % len(_SPINNER_FRAMES)]
-            sys.stdout.write(f"\r{frame} {msg}...")
-            sys.stdout.flush()
-            i += 1
+            if not _spinner_paused.is_set():
+                frame = _SPINNER_FRAMES[i % len(_SPINNER_FRAMES)]
+                sys.stdout.write(f"\r{frame} {msg}...")
+                sys.stdout.flush()
+                i += 1
             self._stop.wait(0.1)
 
 
