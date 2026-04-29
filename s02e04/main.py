@@ -9,7 +9,7 @@ from s02e04.agent import run_agent
 
 
 def main():
-    agent = run_agent("orchestrator", "")
+    agent = run_agent("orchestrator", "Hey")
     task = input("Task: ")
     messages = [{"role": "user", "content": task}]
     # result = agent_loop(
