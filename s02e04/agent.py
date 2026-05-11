@@ -6,12 +6,17 @@ import frontmatter
 import requests
 import os
 import sys
+import json
 
 from common import agent_loop
 from s02e04.tools import HANDLERS, build_tools
 
 AGENTS_DIR = Path(__file__).parent / "agents"
-MAX_TURNS = 2
+MAX_TURNS = 10
+
+CYAN  = "\033[96m"
+YELLOW = "\033[93m"
+RESET = "\033[0m"
 
 
 @dataclass
@@ -47,7 +52,7 @@ def call_llm(messages, schema=None, tools=None, temperature=None):
         body["response_format"] = schema
     if tools:
         body["tools"] = tools
-    if temperature is not None:
+    if temperature != None:
         body["temperature"] = temperature
 
     headers = {
@@ -58,27 +63,26 @@ def call_llm(messages, schema=None, tools=None, temperature=None):
         headers=headers,
         json=body
     )
-    
-    print(resp.status_code)
 
-    return resp;
+    return resp
 
-
-def find_tool(name: str):
-    HANDLERS[str]()
 
 def run_agent(agent_name: str, task: str) -> str:
-    print(f"Starting: {agent_name}")
+    print(f"{CYAN}[agent:{agent_name}]{RESET}")
     agent = load_agent(agent_name)
 
+    # setup the basic information from the file
     messages = [
         {"role": "system", "content": agent.prompt},
         {"role": "user", "content": task},
     ]
 
+    # filter out available tools;
+    tool_schemas = build_tools(agent.tools)
+
     # run until max turns to figure out the problem
-    for n in range(MAX_TURNS):
-        resp = call_llm(messages)
+    for _ in range(MAX_TURNS):
+        resp = call_llm(messages, tools=tool_schemas)
         choices = resp.json()['choices']
         
         for i, choice in enumerate(choices):
@@ -86,7 +90,8 @@ def run_agent(agent_name: str, task: str) -> str:
             if not message:
                 return "Agent error; no response from the model"
 
-            print(f"{agent_name}: {i+1}: {message}")
+            print(f"{agent_name}: {i+1}")
+            # print(message)
             msg = {
                 "role": "assistant",
                 "content": message['content'],
@@ -94,37 +99,29 @@ def run_agent(agent_name: str, task: str) -> str:
 
             if "tool_calls" not in message:
                 print(f"{agent_name} completed")
-                return message.content
+                return message["content"]
             
             msg["tool_calls"] = message["tool_calls"]
             messages.append(msg)
 
             for tool_call in message["tool_calls"]:
-                if tool_call["type"] is not 'function':
+                if tool_call["type"] != 'function':
                     continue
                 
                 fn = tool_call["function"]
                 fn_name, fn_args = fn["name"], fn["arguments"]
-                print(f"{agent_name}: Tool {fn_name} called")
-
-                tool = find_tool(fn_name)                   
-                    
+                print(f"{YELLOW}[tool:{fn_name}] {fn_args}{RESET}")
 
 
+                tool = HANDLERS[fn_name]
+                if tool:
+                    tool_result = tool(**json.loads(fn_args))
 
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "content": tool_result
+                    })                    
 
-            return message['content']
-        n =+ 1
-    
-    tool_schemas = [HANDLERS[tool_name] for tool_name in agent.tools if HANDLERS[tool_name]]
-    tool_handlers = {name: HANDLERS[name] for name in agent.tools if name in HANDLERS}
+    return message['content']
 
-
-    # result, _ = agent_loop(
-    #     messages=messages,
-    #     tools=tool_schemas,
-    #     tool_handlers=tool_handlers,
-    #     model=agent.model,
-    #     max_iterations=MAX_TURNS,
-    # )
-    # return result
