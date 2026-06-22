@@ -1,0 +1,26 @@
+{
+  "name": "ai_devs",
+  "version": "1.0.0",
+  "description": "ai dev course",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blondyn/ai_devs.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/blondyn/ai_devs/issues"
+  },
+  "homepage": "https://github.com/blondyn/ai_devs#readme",
+  "dependencies": {
+    "dotenv": "17.4.2",
+    "gray-matter": "4.0.3",
+    "openai": "6.42.0"
+  }
+}
