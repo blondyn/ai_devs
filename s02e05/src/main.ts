@@ -19,19 +19,6 @@ async function main() {
     }
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    // const history: Record<string, string>[] = [
-    //     { role: 'system', content: 'You are a helpful assistant.' }
-    // ];
-
-    // while (true) {
-    //     const input = await ask(rl, 'You: ');
-    //     if (input.trim() === 'exit') { rl.close(); break; }
-
-    //     history.push({ role: 'user', content: input });
-    //     const reply = await llm(history) as string;
-    //     history.push({ role: 'assistant', content: reply });
-    //     console.log(`${C.assistant}Assistant: ${reply}${C.reset}\n`);
-    // }
 
     console.log("calling an agent");
     const agentResponse = await startAgent('orchestrator');

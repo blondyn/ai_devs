@@ -1,15 +1,16 @@
 import * as endpoints from './endpoints';
 import sharp from 'sharp';
+import readline from 'node:readline';
 import { apiGet, getApiKey, submit } from './api';
 import { startAgent } from './agent';
 
-export type ToolNames = 'verify' | 'fetch_data' | 'delegate';
+export type ToolNames = 'verify' | 'fetch_data' | 'delegate' | 'ask_user';
 
 const MAX_IMAGE_BYTES = 1 * 1024 * 1024;
 
 export async function resizeIfNeeded(buf: Buffer): Promise<Buffer> {
     if (buf.byteLength <= MAX_IMAGE_BYTES) return buf;
-    return sharp(buf).resize({ width: 1024, height: 1024, fit: 'inside' }).png().toBuffer();
+    return sharp(buf).resize({ width: 1024, height: 1024, fit: 'inside' }).jpeg({quality: 70}).toBuffer();
 }
 
 const TOOLS_MAPPING: Record<ToolNames, (...args: any[]) => Promise<unknown>> = {
@@ -20,11 +21,26 @@ const TOOLS_MAPPING: Record<ToolNames, (...args: any[]) => Promise<unknown>> = {
         }
         return apiGet<string>(path, 'text');
     },
-    verify: submit,
+    verify: async ({ task, answer }: { task: string; answer: unknown }) => {
+        try {
+            const result = await submit(task, answer);
+            console.log(`verify response:`, JSON.stringify(result, null, 2));
+            return result;
+        } catch (e: any) {
+            const msg = e?.body ?? e?.message ?? String(e);
+            console.log(`verify error:`, msg);
+            return `Verification failed: ${msg}`;
+        }
+    },
     delegate: async ({ name, task }: Record<string, string>) => {
         console.log(`starting agent ${name}`);
         return startAgent(name, task);
-    }
+    },
+    ask_user: ({ question }: { question: string }) => new Promise<string>(resolve => {
+        process.stdout.write(`\n${question}\nYou: `);
+        const rl = readline.createInterface({ input: process.stdin, terminal: false });
+        rl.once('line', answer => { rl.close(); resolve(answer); });
+    }),
 } as const satisfies Record<string, Function>;
 
 export async function tool_call(name: string, fn_args: string): Promise<unknown> {
@@ -33,6 +49,20 @@ export async function tool_call(name: string, fn_args: string): Promise<unknown>
 }
 
 export const TOOLS: Record<string, object> = {
+    ask_user: {
+        type: 'function' as const,
+        function: {
+            name: 'ask_user',
+            description: 'Ask the human user a question and wait for their response',
+            parameters: {
+                type: 'object',
+                properties: {
+                    question: { type: 'string', description: 'The question to ask the user' },
+                },
+                required: ['question'],
+            },
+        },
+    },
     delegate: {
         type: 'function' as const,
         function: {
@@ -75,7 +105,18 @@ export const TOOLS: Record<string, object> = {
                 type: 'object',
                 properties: {
                     task: { type: 'string', description: 'Task name' },
-                    answer: { type: 'string', description: 'Answer to submit' },
+                    answer: {
+                        type: 'object',
+                        description: 'Answer payload',
+                        properties: {
+                            instructions: {
+                                type: 'array',
+                                items: { type: 'string' },
+                                description: 'List of drone navigation instructions',
+                            },
+                        },
+                        required: ['instructions'],
+                    },
                 },
                 required: ['task', 'answer'],
             },
