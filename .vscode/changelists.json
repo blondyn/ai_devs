@@ -1,0 +1,25 @@
+{
+  "changelists": [
+    {
+      "name": "Default",
+      "files": [
+        ".vscode/changelists.json",
+        "common.ts",
+        "s02e05/workflows/orchestrator.md",
+        "s02e05/src/main.ts",
+        "s02e05/workflows/navigator.md",
+        "s02e05/package-lock.json",
+        "s02e05/package.json",
+        "package-lock.json",
+        "package.json",
+        "s02e05/tsconfig.json",
+        "agent.ts",
+        "api.ts",
+        "llm.ts",
+        "s02e05/output.png",
+        "tools.ts"
+      ]
+    }
+  ],
+  "active": "Default"
+}

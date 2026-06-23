@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { resolve } from "path";
 import readline from 'node:readline';
 
-import { llm, startAgent } from './../../common';
+import { startAgent } from './../../common';
 
 config({ path: resolve(__dirname, "../../.env") });
 
@@ -19,9 +19,9 @@ async function main() {
     }
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const history: Record<string, string>[] = [
-        { role: 'system', content: 'You are a helpful assistant.' }
-    ];
+    // const history: Record<string, string>[] = [
+    //     { role: 'system', content: 'You are a helpful assistant.' }
+    // ];
 
     // while (true) {
     //     const input = await ask(rl, 'You: ');
@@ -33,8 +33,9 @@ async function main() {
     //     console.log(`${C.assistant}Assistant: ${reply}${C.reset}\n`);
     // }
 
+    console.log("calling an agent");
     const agentResponse = await startAgent('orchestrator');
-    console.log(agentResponse);
+    console.log({agentResponse});
 }
 
 main().catch((err) => {

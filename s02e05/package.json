@@ -6,12 +6,14 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/sharp": "0.31.1",
     "ts-node": "^10.9.0",
     "typescript": "^5.4.0"
   },
   "dependencies": {
     "@openrouter/sdk": "0.13.7",
     "dotenv": "^16.4.0",
-    "openai": "6.42.0"
+    "openai": "6.42.0",
+    "sharp": "0.35.2"
   }
 }
