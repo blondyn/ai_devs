@@ -1,6 +1,7 @@
 ---
 name: navigator
 model: openai/gpt-4o
+max_iterations: 3
 tools:
   - fetch_data
 fetch_data_endpoints:
