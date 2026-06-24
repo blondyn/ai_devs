@@ -28,14 +28,12 @@ export async function apiPost<T = unknown>(endpoint: string, payload: unknown): 
     return body as T;
 }
 
-type Parser<T> = "json" | "text" | "binary" | ((raw: string) => T);
-
-export async function apiGet<T = unknown>(path: string, parser?: Parser<T>): Promise<T> {
+export async function apiGet<T = unknown>(path: string): Promise<T> {
     const resp = await fetch(`${BASE_URL}${path}`);
     if (!resp.ok) throw new ApiError(resp.status, await resp.text());
     const contentType = resp.headers.get('content-type');
 
-    if (contentType != null && parser == null) {
+    if (contentType != null) {
         if (contentType.includes('application/json')) return resp.json() as T;
         if (contentType.includes('image/') || contentType.includes('application/octet-stream')) return resp.arrayBuffer() as unknown as T;
     }

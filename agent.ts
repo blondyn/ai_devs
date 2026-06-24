@@ -14,6 +14,7 @@ export async function startAgent(agent: string, startingMessage?: string): Promi
         messages.push({ role: 'user', content: startingMessage });
     }
 
+    const failCounts: Record<string, number> = {};
     let i = 0;
     while (i++ < 10) {
         const response = await llm(messages, { tools: prepTools(data.tools, data), model: data.model });
@@ -24,6 +25,15 @@ export async function startAgent(agent: string, startingMessage?: string): Promi
         if (finish_reason === 'tool_calls') {
             for (const tool of message.tool_calls) {
                 const toolResponse = await tool_call(tool.function.name, tool.function.arguments);
+
+                if (tool.function.name === 'verify') {
+                    const isFailure = typeof toolResponse === 'string' && toolResponse.startsWith('Verification failed');
+                    failCounts.verify = isFailure ? (failCounts.verify ?? 0) + 1 : 0;
+                    if (failCounts.verify >= 2) {
+                        messages.push({ role: 'user', content: `verify has failed ${failCounts.verify} times in a row. You must call ask_user now before retrying.` });
+                        failCounts.verify = 0;
+                    }
+                }
                 if (toolResponse instanceof ArrayBuffer) {
                     const resized = await resizeIfNeeded(Buffer.from(toolResponse));
                     const { format } = await sharp(resized).metadata();

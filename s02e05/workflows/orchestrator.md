@@ -28,7 +28,12 @@ Your task is to orchestrate the process of sending a drone over the water and dr
 
 All commands should be submitted via 'verify' endpoint.
 
+Confirmation gates — always call ask_user before:
+- Submitting flyToLocation — confirm target coordinates with the user first.
+- Submitting destroy — confirm the mission target with the user first.
+
 Error handling:
-- If verify returns a "Verification failed" error, immediately call ask_user showing the error message and ask what instructions to send next.
-- Keep asking the user and submitting until verify succeeds.
+- If verify returns a "Verification failed" error, retry once autonomously with a corrected payload.
+- If verify fails a second time with the same error, call ask_user with the error and ask how to proceed.
+- If navigator returns unclear or conflicting coordinates, retry delegation once. If still unclear, call ask_user.
 

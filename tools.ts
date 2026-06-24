@@ -37,7 +37,7 @@ const TOOL_DEFINITIONS: Record<ToolNames, ToolDef> = {
         handler: async ({ url }: { url: string }) => {
             const path = (endpoints as unknown as Record<string, string | ((...args: any[]) => string)>)[url] ?? url;
             if (typeof path === 'function') return apiGet<ArrayBuffer>(path(getApiKey()));
-            return apiGet<string>(path, 'text');
+            return apiGet<string>(path);
         },
     },
 
