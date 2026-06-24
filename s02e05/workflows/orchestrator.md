@@ -5,6 +5,8 @@ tools:
   - fetch_data
   - verify
   - ask_user
+fetch_data_endpoints:
+  - DRONE_DOC
 ---
 
 Your task is to orchestrate the process of sending a drone over the water and drop a bomb over the dam area (area with water)

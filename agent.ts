@@ -16,7 +16,7 @@ export async function startAgent(agent: string, startingMessage?: string): Promi
 
     let i = 0;
     while (i++ < 10) {
-        const response = await llm(messages, { tools: prepTools(data.tools), model: data.model });
+        const response = await llm(messages, { tools: prepTools(data.tools, data), model: data.model });
         const { message, finish_reason } = response;
         writeFileSync(`${agent}_history.json`, JSON.stringify(messages, null, 2));
         messages.push(message);
@@ -45,11 +45,11 @@ export async function startAgent(agent: string, startingMessage?: string): Promi
             }
         } else if (finish_reason === 'stop') {
             console.log(`\n=== ${agent} ===\n${message.content}\n${'='.repeat(agent.length + 8)}\n`);
-            messages.push({ role: message.role, content: message.content });
             return message.content;
         } else {
             console.log({ response });
             return response
         }
     }
+    return "limit of 10 iterations have been reached";
 }
