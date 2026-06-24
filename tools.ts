@@ -10,7 +10,7 @@ const MAX_IMAGE_BYTES = 1 * 1024 * 1024;
 
 export async function resizeIfNeeded(buf: Buffer): Promise<Buffer> {
     if (buf.byteLength <= MAX_IMAGE_BYTES) return buf;
-    return sharp(buf).resize({ width: 1024, height: 1024, fit: 'inside' }).jpeg({quality: 70}).toBuffer();
+    return sharp(buf).resize({ width: 1024, height: 1024, fit: 'inside' }).jpeg({ quality: 70 }).toBuffer();
 }
 
 const TOOLS_MAPPING: Record<ToolNames, (...args: any[]) => Promise<unknown>> = {
@@ -23,12 +23,9 @@ const TOOLS_MAPPING: Record<ToolNames, (...args: any[]) => Promise<unknown>> = {
     },
     verify: async ({ task, answer }: { task: string; answer: unknown }) => {
         try {
-            const result = await submit(task, answer);
-            console.log(`verify response:`, JSON.stringify(result, null, 2));
-            return result;
+            return await submit(task, answer);
         } catch (e: any) {
             const msg = e?.body ?? e?.message ?? String(e);
-            console.log(`verify error:`, msg);
             return `Verification failed: ${msg}`;
         }
     },
@@ -45,6 +42,8 @@ const TOOLS_MAPPING: Record<ToolNames, (...args: any[]) => Promise<unknown>> = {
 
 export async function tool_call(name: string, fn_args: string): Promise<unknown> {
     if (!(name in TOOLS_MAPPING)) throw new Error("Couldn't find the tool");
+    // exclude ask_user since the user will get the question directly on the terminal
+    if (name != 'ask_user') { console.log(`calling ${name} ${fn_args}`); }
     return TOOLS_MAPPING[name as ToolNames].call(null, JSON.parse(fn_args));
 }
 

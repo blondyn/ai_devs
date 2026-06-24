@@ -35,7 +35,12 @@ export async function llm(
         if (!r.ok) throw new Error(`HTTP error! Status: ${r.status} ${await r.text()}`);
 
         const resp = await r.json();
-        if (resp.error) throw new Error(`LLM error: ${JSON.stringify(resp.error)}`);
+        if (resp.error) {
+            const genId = r.headers.get('x-generation-id');
+            if (genId) console.error(`OpenRouter generation ID: https://openrouter.ai/api/v1/generation?id=${genId}`);
+            console.error('Full error response:', JSON.stringify(resp, null, 2));
+            throw new Error(`LLM error: ${JSON.stringify(resp.error)}`);
+        }
 
         return resp.choices[0];
     } catch (e: any) {

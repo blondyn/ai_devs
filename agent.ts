@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'fs';
 import matter from 'gray-matter';
+import sharp from 'sharp';
 import { llm } from './llm';
 import { prepTools, tool_call, resizeIfNeeded } from './tools';
 
@@ -22,26 +23,28 @@ export async function startAgent(agent: string, startingMessage?: string): Promi
 
         if (finish_reason === 'tool_calls') {
             for (const tool of message.tool_calls) {
-                console.log(`calling ${tool.function.name} ${tool.function.arguments}`);
                 const toolResponse = await tool_call(tool.function.name, tool.function.arguments);
                 if (toolResponse instanceof ArrayBuffer) {
                     const resized = await resizeIfNeeded(Buffer.from(toolResponse));
-                    writeFileSync('output.jpeg', resized);
+                    const { format } = await sharp(resized).metadata();
+                    const mime = `image/${format}`;
+                    writeFileSync(`output.${format}`, resized);
+                    messages.push({ role: 'tool', tool_call_id: tool.id, content: 'Image retrieved.' });
                     messages.push({
-                        role: 'tool',
-                        tool_call_id: tool.id,
-                        content: [{ type: 'input_image', image_url: { url: `data:image/jpeg;base64,${resized.toString('base64')}` } }],
+                        role: 'user',
+                        content: [{ type: 'image_url', image_url: { url: `data:${mime};base64,${resized.toString('base64')}` } }],
                     });
                 } else {
+                    const content = typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse);
                     messages.push({
                         role: 'tool',
                         tool_call_id: tool.id,
-                        content: typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse),
+                        content
                     });
                 }
             }
         } else if (finish_reason === 'stop') {
-            console.log({[agent]: message.content});
+            console.log(`\n=== ${agent} ===\n${message.content}\n${'='.repeat(agent.length + 8)}\n`);
             messages.push({ role: message.role, content: message.content });
             return message.content;
         } else {
