@@ -1,0 +1,17 @@
+{
+  "name": "s03e01",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "ts-node src/main.ts"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "@types/unzipper": "^0.10.10",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "unzipper": "^0.12.3"
+  }
+}

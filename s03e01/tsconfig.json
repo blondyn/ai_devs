@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "outDir": "./dist",
+    "rootDir": "../..",
+    "strict": true,
+    "esModuleInterop": true,
+    "types": ["node"]
+  },
+  "include": ["src", "../../common.ts", "../../api.ts", "../../llm.ts", "../../tools.ts", "../../agent.ts", "../../endpoints.ts", "../../logger.ts"]
+}
