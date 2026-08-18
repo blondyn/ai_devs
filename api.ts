@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { resolve } from "path";
+import { logger } from './logger';
 
 config({ path: resolve(__dirname, ".env") });
 
@@ -41,7 +42,5 @@ export async function apiGet<T = unknown>(path: string): Promise<T> {
 }
 
 export async function submit(task: string, answer: unknown): Promise<unknown> {
-    const result = await apiPost("/verify", { apikey: getApiKey(), task, answer });
-    console.log("Response:", JSON.stringify(result, null, 2));
-    return result;
+    return await apiPost("/verify", { apikey: getApiKey(), task, answer });
 }

@@ -23,5 +23,8 @@
     "gray-matter": "4.0.3",
     "openai": "6.42.0",
     "sharp": "0.35.2"
+  },
+  "devDependencies": {
+    "@types/node": "26.0.0"
   }
 }

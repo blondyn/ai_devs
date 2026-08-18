@@ -3,8 +3,9 @@ import sharp from 'sharp';
 import readline from 'node:readline';
 import { apiGet, getApiKey, submit } from './api';
 import { startAgent } from './agent';
+import { logger } from './logger';
 
-export type ToolNames = 'verify' | 'fetch_data' | 'delegate' | 'ask_user';
+export type ToolNames = 'verify' | 'fetch_data' | 'delegate' | 'ask_user' | 'run_shell';
 
 const MAX_IMAGE_BYTES = 1 * 1024 * 1024;
 
@@ -42,22 +43,14 @@ const TOOL_DEFINITIONS: Record<ToolNames, ToolDef> = {
     },
 
     verify: {
-        description: 'Submit the final answer for verification',
+        description: 'Submit the final answer for verification. The shape of "answer" is task-specific — follow the task instructions for the exact fields expected.',
         parameters: {
             type: 'object',
             properties: {
                 task: { type: 'string', description: 'Task name' },
                 answer: {
                     type: 'object',
-                    description: 'Answer payload',
-                    properties: {
-                        instructions: {
-                            type: 'array',
-                            items: { type: 'string' },
-                            description: 'List of drone navigation instructions',
-                        },
-                    },
-                    required: ['instructions'],
+                    description: 'Answer payload — shape depends on the task, see task instructions',
                 },
             },
             required: ['task', 'answer'],
@@ -68,6 +61,30 @@ const TOOL_DEFINITIONS: Record<ToolNames, ToolDef> = {
             } catch (e: any) {
                 const msg = e?.body ?? e?.message ?? String(e);
                 return `Verification failed: ${msg}`;
+            }
+        },
+    },
+    run_shell: {
+        description: 'Run one command on the remote shell API. This is a non-standard shell — start with "help" to see what commands actually exist before assuming standard Linux behavior.',
+        parameters: {
+            type: 'object',
+            properties: {
+                cmd: { type: 'string', description: 'The shell command to execute' },
+            },
+            required: ['cmd'],
+        },
+        handler: async ({ cmd }: { cmd: string }) => {
+            try {
+                const resp = await fetch('https://hub.ag3nts.org/api/shell', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apikey: getApiKey(), cmd }),
+                });
+                const body = await resp.text();
+                if (!resp.ok) return `Shell command failed (HTTP ${resp.status}): ${body}`;
+                return body;
+            } catch (e: any) {
+                return `Shell command error: ${e?.message ?? String(e)}`;
             }
         },
     },
@@ -82,7 +99,7 @@ const TOOL_DEFINITIONS: Record<ToolNames, ToolDef> = {
             required: ['name', 'task'],
         },
         handler: async ({ name, task }: Record<string, string>) => {
-            console.log(`starting agent ${name}`);
+            logger.info(`starting agent ${name}`);
             return startAgent(name, task);
         },
     },
@@ -114,7 +131,7 @@ export const TOOLS: Record<string, object> = Object.fromEntries(
 export async function tool_call(name: string, fn_args: string): Promise<unknown> {
     const def = TOOL_DEFINITIONS[name as ToolNames];
     if (!def) throw new Error(`Couldn't find the tool: ${name}`);
-    if (!def.silent) console.log(`calling ${name} ${fn_args}`);
+    if (!def.silent) logger.info(`calling ${name}`, JSON.parse(fn_args));
     return def.handler(JSON.parse(fn_args));
 }
 

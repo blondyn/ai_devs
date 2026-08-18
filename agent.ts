@@ -1,8 +1,9 @@
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import matter from 'gray-matter';
 import sharp from 'sharp';
 import { llm } from './llm';
 import { prepTools, tool_call, resizeIfNeeded } from './tools';
+import { logger } from './logger';
 
 type Messages = Record<string, unknown>[];
 
@@ -17,7 +18,7 @@ async function pushToolResult(messages: Messages, tool: any, toolResponse: unkno
         const resized = await resizeIfNeeded(Buffer.from(toolResponse));
         const { format } = await sharp(resized).metadata();
         const mime = `image/${format}`;
-        writeFileSync(`output.${format}`, resized);
+        logger.artifact(`output.${format}`, resized);
         messages.push({ role: 'tool', tool_call_id: tool.id, content: 'Image retrieved.' });
         messages.push({
             role: 'user',
@@ -32,6 +33,7 @@ async function pushToolResult(messages: Messages, tool: any, toolResponse: unkno
 function checkFailGuardrail(messages: Messages, tool: any, toolResponse: unknown, failCounts: Record<string, number>) {
     if (tool.function.name !== 'verify') return;
     const isFailure = typeof toolResponse === 'string' && toolResponse.startsWith('Verification failed');
+    console.log(toolResponse);
     failCounts.verify = isFailure ? (failCounts.verify ?? 0) + 1 : 0;
     if (failCounts.verify >= 2) {
         messages.push({ role: 'user', content: `verify has failed ${failCounts.verify} times in a row. You must call ask_user now before retrying.` });
@@ -50,7 +52,7 @@ export async function startAgent(agent: string, startingMessage?: string): Promi
     for (let i = 0; i < MAX_ITERATIONS; i++) {
         const response = await llm(messages, { tools: prepTools(data.tools, data), model: data.model });
         const { message, finish_reason } = response;
-        writeFileSync(`${agent}_history.json`, JSON.stringify(messages, null, 2));
+        logger.artifact(`${agent}_history.json`, JSON.stringify(messages, null, 2));
         messages.push(message);
 
         if (finish_reason === 'tool_calls') {
@@ -60,10 +62,10 @@ export async function startAgent(agent: string, startingMessage?: string): Promi
                 await pushToolResult(messages, tool, toolResponse);
             }
         } else if (finish_reason === 'stop') {
-            console.log(`\n=== ${agent} ===\n${message.content}\n${'='.repeat(agent.length + 8)}\n`);
+            logger.info(`\n=== ${agent} ===\n${message.content}\n${'='.repeat(agent.length + 8)}\n`);
             return message.content;
         } else {
-            console.log({ response });
+            logger.debug('unexpected finish_reason', response);
             return response;
         }
     }
