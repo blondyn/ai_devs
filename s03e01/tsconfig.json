@@ -7,6 +7,7 @@
     "rootDir": "../..",
     "strict": true,
     "esModuleInterop": true,
+    "skipLibCheck": true,
     "types": ["node"]
   },
   "include": ["src", "../../common.ts", "../../api.ts", "../../llm.ts", "../../tools.ts", "../../agent.ts", "../../endpoints.ts", "../../logger.ts"]

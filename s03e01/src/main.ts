@@ -1,7 +1,10 @@
+import { sdk } from './instrumentation'; // must be the first import — registers the span processor before any tracing
 import { config } from 'dotenv';
 import { resolve } from 'path';
+import { randomUUID } from 'crypto';
 import { readSensorsZip, SensorComponent, SensorEntry } from './tools';
 import { submit } from '../../api';
+import { propagateAttributes, startActiveObservation, startObservation } from '@langfuse/tracing';
 config({ path: resolve(__dirname, '../../.env') });
 
 const constraints: Map<SensorComponent, [number, number]> = new Map([
@@ -42,8 +45,18 @@ const misreportedData = (entry: SensorEntry) => {
 }
 
 const classifyErronousInterpretation = async (entries: Map<string, string[]>): Promise<ClassificationResult | null> => {
+    const model = 'openai/gpt-4o-mini';
+    const messages = [
+        { role: 'user', content: 'Classify messages based on the string provided. In negative_feedback we should find messages identifying a problem with the sensor reading or any problem' },
+        { role: 'user', content: `Here are operator notes, each mapped to every sensor id that shares that exact note text:\n\`\`\`json\n${JSON.stringify([...entries].map(([note, ids]) => ({ note, ids })))}\n\`\`\`\n\nFor each note matching the category, return ALL of its ids in negative_feedback — not just one per note.` }
+    ];
+    const generation = startObservation(
+        'classify-notes',
+        { model, input: messages },
+        { asType: 'generation' }
+    );
+
     try {
-        console.log(`firing request with ${entries.size} element map`)
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -51,11 +64,8 @@ const classifyErronousInterpretation = async (entries: Map<string, string[]>): P
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-4o-mini',
-                messages: [
-                    { role: 'user', content: 'Classify messages based on the string provided. In negative_feedback we should find messages identifying a problem with the sensor reading or any problem' },
-                    { role: 'user', content: `Here are operator notes, each mapped to every sensor id that shares that exact note text:\n\`\`\`json\n${JSON.stringify([...entries].map(([note, ids]) => ({ note, ids })))}\n\`\`\`\n\nFor each note matching the category, return ALL of its ids in negative_feedback — not just one per note.` }
-                ],
+                model,
+                messages,
                 response_format: {
                     type: 'json_schema',
                     json_schema: {
@@ -85,8 +95,18 @@ const classifyErronousInterpretation = async (entries: Map<string, string[]>): P
             throw new Error(`${response.status} ${error}`);
         }
         const jsonResponse = await response.json();
-        return parseResponse(jsonResponse);
+        const result = parseResponse(jsonResponse);
+        generation.update({
+            output: { negativeCount: result.negative_feedback?.length ?? 0 },
+            usageDetails: {
+                input: jsonResponse.usage?.prompt_tokens,
+                output: jsonResponse.usage?.completion_tokens,
+                total: jsonResponse.usage?.total_tokens,
+            },
+        }).end();
+        return result;
     } catch (e: any) {
+        generation.update({ output: { error: e?.message ?? String(e) } }).end();
         return Promise.reject(e);
     }
 
@@ -129,47 +149,78 @@ const chunk = <T>(items: T[], size: number): T[][] => {
 }
 
 async function main() {
-    console.log('Downloading sensors.zip...');
-    const sensors = await readSensorsZip();
-    console.log(`Loaded ${sensors.size} sensor files`);
+    await propagateAttributes(
+        { sessionId: randomUUID(), traceName: 's03e01-evaluation' },
+        async () => {
+            await startActiveObservation('evaluation-run', async (root) => {
+                console.log('Downloading sensors.zip...');
+                const sensors = await startActiveObservation('load-sensors', async (span) => {
+                    const result = await readSensorsZip();
+                    span.update({ output: { count: result.size } });
+                    return result;
+                });
+                console.log(`Loaded ${sensors.size} sensor files`);
 
+                // invalid check
+                const { invalidDataReadsIds, validDataReads } = await startActiveObservation('guardrail-scan', async (span) => {
+                    const invalidDataReadsIds = new Set([...sensors].filter(([_key, entry]) => !isWithinGuardrail(entry) || misreportedData(entry)).map(([key]) => key));
+                    // valid checks
+                    const validDataReads = new Map([...sensors].filter(([key]) => !invalidDataReadsIds.has(key)));
+                    span.update({ output: { violations: invalidDataReadsIds.size, total: sensors.size } });
+                    return { invalidDataReadsIds, validDataReads };
+                });
 
-    // invalid check
-    const invalidDataReadsIds = new Set([...sensors].filter(([_key, entry]) => !isWithinGuardrail(entry) || misreportedData(entry)).map(([key]) => key));
+                // remove the invalid subset
+                const duplicates = await startActiveObservation('dedupe-notes', async (span) => {
+                    const result = getDuplicatedOperatorNotes(validDataReads);
+                    span.update({ output: { uniqueNotes: result.size, entries: validDataReads.size } });
+                    return result;
+                });
 
-    // valid checks
-    const validDataReads = new Map([...sensors].filter(([key]) => !invalidDataReadsIds.has(key)));
+                const negativeFeedback = await startActiveObservation('classify-batches', async (span) => {
+                    const chunked = chunk(Array.from(duplicates), 300);
+                    const chunkedRequests = chunked.map(batch => classifyErronousInterpretation(new Map(batch)))
 
-    // remove the invalid subset
-    const duplicates = getDuplicatedOperatorNotes(validDataReads)
-    const chunked = chunk(Array.from(duplicates), 300);
+                    const settled = await Promise.allSettled(chunkedRequests);
+                    const data = settled
+                        .filter((r): r is PromiseFulfilledResult<ClassificationResult | null> => r.status === 'fulfilled')
+                        .map(r => r.value);
+                    const failedCount = settled.length - data.length;
+                    if (failedCount > 0) console.warn(`${failedCount} batch(es) failed to classify`);
+                    span.update({ output: { batches: settled.length, failed: failedCount } });
 
-    const chunkedRequests = chunked.map(batch => classifyErronousInterpretation(new Map(batch)))
+                    return new Set(data.flatMap(d => d?.negative_feedback ?? []));
+                });
 
-    const settled = await Promise.allSettled(chunkedRequests);
-    const data = settled
-        .filter((r): r is PromiseFulfilledResult<ClassificationResult | null> => r.status === 'fulfilled')
-        .map(r => r.value);
-    const failedCount = settled.length - data.length;
-    if (failedCount > 0) console.warn(`${failedCount} batch(es) failed to classify`);
+                /*
+                Jako anomalie definiujemy:
+                    - X dane pomiarowe nie mieszczą się w normach
+                    - operator twierdzi, że wszystko jest OK, ale dane są niepoprawne (false negative)
+                    - X operator twierdzi, że znalazł błędy, ale dane są OK (false positive)
+                    - X czujnik zwraca dane, których nie powinien zwracać (np. czujnik poziomu wody zwraca napięcie prądu)
+                */
+                const payload = [
+                    ...invalidDataReadsIds,
+                    ...negativeFeedback
+                ]
+                console.log({ payload })
 
-    const negativeFeedback = new Set(data.flatMap(d => d?.negative_feedback ?? []));
+                const response = await startActiveObservation('submit-results', async (span) => {
+                    const result = await submit('evaluation', { "recheck": payload });
+                    span.update({ output: { submittedCount: payload.length } });
+                    return result;
+                });
+                console.log(response);
+                root.update({ output: { finalCount: payload.length } });
+            });
+        }
+    );
 
-    /*
-    Jako anomalie definiujemy:
-        - X dane pomiarowe nie mieszczą się w normach
-        - operator twierdzi, że wszystko jest OK, ale dane są niepoprawne (false negative)
-        - X operator twierdzi, że znalazł błędy, ale dane są OK (false positive)
-        - X czujnik zwraca dane, których nie powinien zwracać (np. czujnik poziomu wody zwraca napięcie prądu)
-    */
-    // // verify
-    const payload = [
-        ...invalidDataReadsIds,
-        ...negativeFeedback
-    ]
-    console.log({ payload })
-    const response = await submit('evaluation', { "recheck": payload })
-    console.log(response);
+    await sdk.shutdown();
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+main().catch(async (err) => {
+    console.error(err);
+    await sdk.shutdown();
+    process.exit(1);
+});
