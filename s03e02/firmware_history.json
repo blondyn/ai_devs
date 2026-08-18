@@ -1,0 +1,68 @@
+[
+  {
+    "role": "system",
+    "content": "\nYou are operating a remote Linux-like virtual machine through a non-standard shell API (the `run_shell` tool). Do not assume standard Linux command behavior — this shell has its own, limited command set. Your first action must be running `help` to discover what's actually available before doing anything else.\n\nRules you must always follow:\n- You operate as a regular (non-root) user. Most of the disk is read-only.\n- Never read or write anything under `/etc`, `/root`, or `/proc`. Touching these gets your access revoked.\n- If a directory contains a `.gitignore` file, treat every path it lists as off-limits — do not read or modify them.\n- The shell API can return rate-limit or ban errors instead of command output. If you see one, back off and retry later rather than repeating the same command immediately. A ban lasts a fixed number of seconds and then clears on its own.\n- If you make a mess of the VM's state, use the `reboot` command to reset it and start over.\n- Work step by step — one shell command per tool call, and reason about the actual output before deciding the next command. Don't guess ahead.\n\nWhen you've completed the goal and have the result the goal asks for, call `verify` with `task: \"firmware\"` and the answer shape the goal describes. If you get stuck, use `ask_user` to ask for guidance rather than looping on the same failing approach.\n"
+  },
+  {
+    "role": "user",
+    "content": "<!--\nWrite the goal for the agent here. This file's content is passed\nverbatim as the agent's first message when `npm start` runs.\n-->"
+  },
+  {
+    "role": "assistant",
+    "content": "I'll start by running `help` to discover what commands are available in this shell.",
+    "refusal": null,
+    "reasoning": null,
+    "tool_calls": [
+      {
+        "type": "function",
+        "index": 0,
+        "id": "toolu_012VpFRxtRCB5qNHvEJwNjdt",
+        "function": {
+          "name": "run_shell",
+          "arguments": "{\"cmd\": \"help\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "toolu_012VpFRxtRCB5qNHvEJwNjdt",
+    "content": "{\n    \"code\": 190,\n    \"message\": \"Available commands.\",\n    \"data\": [\n        \"help - show available commands and short descriptions.\",\n        \"ls [path] - list files and directories.\",\n        \"cat <path> - show file content (or list directory content).\",\n        \"cd [path] - change current directory.\",\n        \"pwd - print current working directory.\",\n        \"rm <file> - remove a file in virtual filesystem.\",\n        \"editline <file> <line-number> <content> - replace one line in a text file.\",\n        \"reboot - rebuild virtual filesystem state from disk.\",\n        \"date - print current server date and time.\",\n        \"uptime - show virtual machine uptime in Linux format.\",\n        \"find <pattern> - find files by name in the whole virtual filesystem (supports wildcards).\",\n        \"history - show command history.\",\n        \"whoami - print current user name.\"\n    ]\n}"
+  },
+  {
+    "role": "assistant",
+    "content": null,
+    "refusal": null,
+    "reasoning": null,
+    "tool_calls": [
+      {
+        "type": "function",
+        "index": 0,
+        "id": "toolu_016bJGouHB8jiQdvzxgtMJQM",
+        "function": {
+          "name": "run_shell",
+          "arguments": "{\"cmd\": \"pwd\"}"
+        }
+      },
+      {
+        "type": "function",
+        "index": 1,
+        "id": "toolu_01UXw2DNMuLdbqEk2G14DaTj",
+        "function": {
+          "name": "run_shell",
+          "arguments": "{\"cmd\": \"ls\"}"
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "toolu_016bJGouHB8jiQdvzxgtMJQM",
+    "content": "{\n    \"code\": 125,\n    \"message\": \"Current working directory.\",\n    \"data\": \"/\"\n}"
+  },
+  {
+    "role": "tool",
+    "tool_call_id": "toolu_01UXw2DNMuLdbqEk2G14DaTj",
+    "content": "{\n    \"code\": 120,\n    \"message\": \"Directory listing.\",\n    \"path\": \"/\",\n    \"data\": [\n        \"bin/\",\n        \"dev/\",\n        \"etc/\",\n        \"home/\",\n        \"opt/\",\n        \"proc/\",\n        \"root/\",\n        \"tmp/\"\n    ]\n}"
+  }
+]
