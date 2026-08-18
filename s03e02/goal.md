@@ -9,7 +9,7 @@ Your task is to obtain a code which format is matching ECCS-xxxxxxxxxxxxxxxxxxxx
 
 To do that you have to connect to the limited unix distribution server and navigate through files and commands available at the server. The distribution doesn't support the default UNIX commands, you have to follow help and hints returned by the shell.
 
-the command to run is located under /opt/firmware/cooler/cooler.bin
+the command to run is located under /opt/firmware/cooler/cooler.bin — this is the ONLY binary whose success matters for completing the task. Exploration may surface other executables or scripts on the system; they are part of the environment, not the goal. Do not spend effort guessing passwords or arguments for any binary other than the one named here, unless you find concrete evidence (not assumption) that running it is a required step toward running this one.
 
 Couple of caveats:
 - You can't touch the /etc, /root i /proc/
