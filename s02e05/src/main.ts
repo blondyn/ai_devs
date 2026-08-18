@@ -21,7 +21,7 @@ async function main() {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
     console.log("calling an agent");
-    const agentResponse = await startAgent('orchestrator');
+    const agentResponse = await startAgent('navigate_with_user');
     console.log({agentResponse});
 }
 

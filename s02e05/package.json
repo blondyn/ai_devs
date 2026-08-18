@@ -5,7 +5,7 @@
     "start": "ts-node src/main.ts"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
+    "@types/node": "20.19.43",
     "@types/sharp": "0.31.1",
     "ts-node": "^10.9.0",
     "typescript": "^5.4.0"
